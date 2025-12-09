@@ -1,0 +1,439 @@
+/* Admin Panel */
+
+.admin {
+  min-height: 100vh;
+  padding-top: 180px;
+  padding-bottom: var(--space-2xl);
+  background-color: var(--color-charcoal);
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+}
+
+.header h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  color: var(--color-off-white);
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.statCard {
+  background-color: var(--color-muted-slate);
+  padding: var(--space-lg);
+  border-radius: 4px;
+  border: 1px solid rgba(201, 166, 122, 0.1);
+}
+
+.statCard h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-warm-sand);
+  margin-bottom: var(--space-sm);
+}
+
+.statCard .value {
+  font-size: 36px;
+  font-family: var(--font-heading);
+  color: var(--color-off-white);
+}
+
+.controls {
+  display: flex;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  flex: 1;
+  min-width: 250px;
+}
+
+.searchBox input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: var(--color-muted-slate);
+  border: 2px solid rgba(201, 166, 122, 0.2);
+  border-radius: 2px;
+  color: var(--color-off-white);
+  font-size: 14px;
+}
+
+.searchBox input:focus {
+  outline: none;
+  border-color: var(--color-warm-sand);
+}
+
+.filterButtons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.filterBtn {
+  padding: 12px 20px;
+  background-color: var(--color-muted-slate);
+  color: var(--color-off-white);
+  border: 2px solid rgba(201, 166, 122, 0.2);
+  border-radius: 2px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  opacity: 0.7;
+}
+
+.filterBtn:hover,
+.filterBtn.active {
+  opacity: 1;
+  border-color: var(--color-warm-sand);
+  background-color: var(--color-warm-sand);
+  color: var(--color-charcoal);
+}
+
+.imageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.imageCard {
+  background-color: var(--color-muted-slate);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 166, 122, 0.1);
+  transition: var(--transition-fast);
+}
+
+.imageCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.imagePreview {
+  position: relative;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  background-color: var(--color-charcoal);
+}
+
+.imagePreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.statusBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 12px;
+  border-radius: 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.statusBadge.published {
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+}
+
+.statusBadge.draft {
+  background-color: rgba(255, 152, 0, 0.9);
+  color: white;
+}
+
+.imageInfo {
+  padding: var(--space-sm);
+}
+
+.imageInfo h4 {
+  font-size: 14px;
+  color: var(--color-off-white);
+  margin-bottom: 4px;
+}
+
+.imageMeta {
+  font-size: 12px;
+  color: var(--color-off-white);
+  opacity: 0.6;
+  margin-bottom: var(--space-sm);
+}
+
+.imageActions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.iconBtn {
+  padding: 6px;
+  background-color: rgba(201, 166, 122, 0.1);
+  border: none;
+  border-radius: 2px;
+  color: var(--color-warm-sand);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background-color: var(--color-warm-sand);
+  color: var(--color-charcoal);
+}
+
+/* Upload Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+  padding: var(--gutter);
+}
+
+.modal {
+  background-color: var(--color-muted-slate);
+  border-radius: 4px;
+  padding: var(--space-xl);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid rgba(201, 166, 122, 0.2);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+}
+
+.modalHeader h2 {
+  font-size: 28px;
+  color: var(--color-off-white);
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  color: var(--color-off-white);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: var(--transition-fast);
+}
+
+.closeBtn:hover {
+  background-color: rgba(201, 166, 122, 0.2);
+}
+
+.dropZone {
+  border: 3px dashed rgba(201, 166, 122, 0.3);
+  border-radius: 4px;
+  padding: var(--space-2xl);
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  background-color: rgba(201, 166, 122, 0.05);
+}
+
+.dropZone:hover,
+.dropZone.active {
+  border-color: var(--color-warm-sand);
+  background-color: rgba(201, 166, 122, 0.1);
+}
+
+.dropZone svg {
+  margin: 0 auto var(--space-md);
+  color: var(--color-warm-sand);
+}
+
+.dropZone p {
+  color: var(--color-off-white);
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.dropZone span {
+  font-size: 13px;
+  color: var(--color-off-white);
+  opacity: 0.5;
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-warm-sand);
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  padding: 12px 14px;
+  background-color: var(--color-charcoal);
+  border: 2px solid rgba(201, 166, 122, 0.2);
+  border-radius: 2px;
+  color: var(--color-off-white);
+  font-size: 14px;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: var(--color-warm-sand);
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.tagInput {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--color-charcoal);
+  border: 2px solid rgba(201, 166, 122, 0.2);
+  border-radius: 2px;
+  min-height: 42px;
+}
+
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: rgba(201, 166, 122, 0.2);
+  color: var(--color-warm-sand);
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+.tag button {
+  background: none;
+  border: none;
+  color: var(--color-warm-sand);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tagInput input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--color-off-white);
+  font-size: 14px;
+  padding: 4px;
+  min-width: 100px;
+}
+
+.tagInput input:focus {
+  outline: none;
+}
+
+.uploadProgress {
+  margin-top: var(--space-md);
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--color-charcoal);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-warm-sand), var(--color-soft-gold));
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  font-size: 13px;
+  color: var(--color-off-white);
+  opacity: 0.7;
+  text-align: center;
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(201, 166, 122, 0.1);
+}
+
+@media (max-width: 968px) {
+  .admin {
+    padding-top: 160px;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+  
+  .controls {
+    flex-direction: column;
+  }
+  
+  .searchBox {
+    width: 100%;
+  }
+  
+  .imageGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}

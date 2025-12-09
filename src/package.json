@@ -1,0 +1,31 @@
+{
+  "name": "the-urbann-interior-design",
+  "version": "1.0.0",
+  "description": "The Urbann - Premium Interior Design Studio Website",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "dev:api": "wrangler dev",
+    "db:migrate": "wrangler d1 execute urbann_db --file=./database/schema.sql"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.22.0",
+    "motion": "^10.18.0",
+    "lucide-react": "^0.344.0",
+    "react-responsive-masonry": "^2.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.4",
+    "wrangler": "^3.22.0"
+  }
+}

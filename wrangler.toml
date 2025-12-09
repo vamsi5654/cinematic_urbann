@@ -1,0 +1,40 @@
+# Cloudflare Workers Configuration for The Urbann
+
+name = "the-urbann-api"
+compatibility_date = "2024-01-01"
+main = "functions/api/[[path]].ts"
+
+# R2 Bucket Bindings (Image Storage)
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "urbann-images"
+preview_bucket_name = "urbann-images-preview"
+
+# D1 Database Binding (Metadata Storage)
+[[d1_databases]]
+binding = "DB"
+database_name = "urbann_db"
+database_id = "53065fd4-b4ba-41b1-9b2b-0149dd08155f"
+
+# Environment Variables
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = "your-jwt-secret-key-change-this-in-production"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD_HASH = "$2a$10$placeholder" # Will be generated
+
+# CORS Settings
+[env.production]
+ALLOWED_ORIGINS = "https://your-domain.pages.dev"
+
+[env.preview]
+ALLOWED_ORIGINS = "*"
+
+# Build configuration for Cloudflare Pages
+[build]
+command = "npm run build"
+cwd = "."
+watch_dirs = ["src", "pages", "components"]
+
+[build.upload]
+format = "service-worker"
