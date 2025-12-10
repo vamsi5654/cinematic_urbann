@@ -8,6 +8,7 @@ import { Project } from '../types';
 import * as api from '../services/api';
 import styles from './Gallery.module.css';
 
+
 const mockProjects: Project[] = [
   {
     id: '1',
