@@ -76,6 +76,7 @@ export async function onRequest(context: { request: Request; env: Env; params: {
 }
 
 // Login handler
+// Login handler
 async function handleLogin(request: Request, env: Env, headers: Record<string, string>) {
   const { username, password } = await request.json();
   
@@ -87,32 +88,31 @@ async function handleLogin(request: Request, env: Env, headers: Record<string, s
   if (!user) {
     return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
       status: 401,
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' }, // ✅
     });
   }
   
-  // Simple password check (in production, use bcrypt)
-  // For now, we'll use a simple comparison - YOU MUST implement proper hashing
-  const isValid = password === 'admin123'; // TODO: Replace with bcrypt.compare(password, user.password_hash)
+  // Simple password check (temporary)
+  const isValid = password === 'admin123'; // later: compare with user.password_hash
   
   if (!isValid) {
     return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
       status: 401,
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' }, // ✅
     });
   }
   
-  // Generate JWT token (simplified - use a proper JWT library in production)
+  // Generate JWT token (simplified)
   const token = btoa(JSON.stringify({ 
     userId: user.id, 
     username: user.username,
     exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
   }));
   
-  // Update last login
-  await env.DB.prepare(
-    'UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(user.id).run();
+  await env.DB
+    .prepare('UPDATE admin_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?')
+    .bind(user.id)
+    .run();
   
   return new Response(JSON.stringify({ 
     token,
@@ -126,6 +126,7 @@ async function handleLogin(request: Request, env: Env, headers: Record<string, s
     headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }
+
 
 // Upload handler
 async function handleUpload(request: Request, env: Env, headers: Record<string, string>) {
