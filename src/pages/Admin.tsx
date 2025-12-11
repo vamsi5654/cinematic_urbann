@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Upload, Search, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut } from 'lucide-react';
+import { Upload, Search, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { ImageUpload } from '../types';
+import { ImageUpload, ScheduledEvent, ContactSubmission } from '../types';
 import * as api from '../services/api';
 import styles from './Admin.module.css';
 
 export default function Admin() {
+  const [activeTab, setActiveTab] = useState<'images' | 'events' | 'contacts'>('images');
   const [images, setImages] = useState<ImageUpload[]>([]);
+  const [events, setEvents] = useState<ScheduledEvent[]>([]);
+  const [contacts, setContacts] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

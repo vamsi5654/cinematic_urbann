@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ContactFormData } from '../types';
+import * as api from '../services/api';
 import styles from './Contact.module.css';
 
 export default function Contact() {
@@ -27,22 +28,26 @@ export default function Contact() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Here you would normally send to backend/API
-    console.log('Form submitted:', formData);
-    setIsSubmitted(true);
-    
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        projectType: '',
-        budget: '',
-        timeline: '',
-        message: ''
-      });
-      setIsSubmitted(false);
-    }, 3000);
+    api.submitContactForm(formData).then(() => {
+      console.log('Form submitted:', formData);
+      setIsSubmitted(true);
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          projectType: '',
+          budget: '',
+          timeline: '',
+          message: ''
+        });
+        setIsSubmitted(false);
+      }, 3000);
+    }).catch(error => {
+      console.error('Error submitting form:', error);
+    });
   };
 
   return (

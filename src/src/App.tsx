@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Topbar } from '../components/Topbar';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
+import { EventPopup } from '../components/EventPopup';
 import Home from '../pages/Home';
 import Gallery from '../pages/Gallery';
 import ProjectDetail from '../pages/ProjectDetail';
@@ -31,6 +32,7 @@ export default function App() {
         </main>
         
         <Footer />
+        <EventPopup />
       </div>
     </Router>
   );

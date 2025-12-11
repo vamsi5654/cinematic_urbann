@@ -184,3 +184,100 @@ export async function updateImage(
     body: JSON.stringify(updates),
   });
 }
+
+// Contact Form Submission API
+export async function submitContactForm(formData: {
+  name: string;
+  email: string;
+  phone: string;
+  projectType: string;
+  budget: string;
+  timeline: string;
+  message: string;
+}): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/contact`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(formData),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to submit contact form');
+  }
+}
+
+// Get Contact Submissions (Admin only)
+export async function getContactSubmissions(): Promise<any[]> {
+  const data = await apiFetch('/contact');
+  return data.submissions.map((sub: any) => ({
+    ...sub,
+    submittedAt: new Date(sub.submittedAt),
+  }));
+}
+
+// Mark Contact as Read
+export async function markContactAsRead(id: string): Promise<void> {
+  await apiFetch(`/contact/${id}/read`, {
+    method: 'PUT',
+  });
+}
+
+// Scheduled Events API
+export async function createEvent(eventData: {
+  title: string;
+  message: string;
+  imageUrl?: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  active: boolean;
+}): Promise<any> {
+  return await apiFetch('/events', {
+    method: 'POST',
+    body: JSON.stringify(eventData),
+  });
+}
+
+export async function getEvents(): Promise<any[]> {
+  const data = await apiFetch('/events');
+  return data.events.map((event: any) => ({
+    ...event,
+    createdAt: new Date(event.createdAt),
+    updatedAt: new Date(event.updatedAt),
+  }));
+}
+
+export async function getActiveEvents(): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/events/active`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch active events');
+  }
+  const data = await response.json();
+  return data.events.map((event: any) => ({
+    ...event,
+    createdAt: new Date(event.createdAt),
+    updatedAt: new Date(event.updatedAt),
+  }));
+}
+
+export async function updateEvent(
+  id: string,
+  updates: {
+    title?: string;
+    message?: string;
+    imageUrl?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    active?: boolean;
+  }
+): Promise<void> {
+  await apiFetch(`/events/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  await apiFetch(`/events/${id}`, {
+    method: 'DELETE',
+  });
+}

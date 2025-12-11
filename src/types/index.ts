@@ -54,3 +54,29 @@ export interface ContactFormData {
   timeline: string;
   message: string;
 }
+
+export interface ContactSubmission {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  projectType: string;
+  budget: string;
+  timeline: string;
+  message: string;
+  readStatus: boolean;
+  submittedAt: Date;
+}
+
+export interface ScheduledEvent {
+  id: string;
+  title: string;
+  message: string;
+  imageUrl?: string;
+  scheduledDate: string; // YYYY-MM-DD
+  scheduledTime: string; // HH:MM
+  active: boolean;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
