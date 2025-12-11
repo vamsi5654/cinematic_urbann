@@ -34,16 +34,16 @@ export function Footer() {
             <h3>Get in Touch</h3>
             <p>
               <MapPin size={16} style={{ display: 'inline', marginRight: '8px' }} />
-              123 Design Street, Suite 100<br />
-              New York, NY 10001
+              6th Floor, The 27th Building, DLF Rd, Jayabheri Enclave,<br />
+              Gachibowli, Hyderabad, Telangana 500032
             </p>
             <p>
               <Phone size={16} style={{ display: 'inline', marginRight: '8px' }} />
-              +1 (234) 567-890
+              +91 8977978321
             </p>
             <p>
               <Mail size={16} style={{ display: 'inline', marginRight: '8px' }} />
-              hello@theurbann.com
+              Urbann2009@gmail.com
             </p>
             <div className={styles.socialLinks}>
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
