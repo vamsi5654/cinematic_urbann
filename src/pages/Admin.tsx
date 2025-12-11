@@ -78,11 +78,43 @@ export default function Admin() {
     setImages([]);
   };
 
-  const filteredImages = images.filter(img => {
-    const matchesSearch = img.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         img.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+// Safe helper: always returns a lowercase string
+const safe = (v: any) => (v == null ? '' : String(v)).toLowerCase();
+
+// Normalize search once
+const query = safe(searchQuery);
+
+// Helper to normalize tags from either JSON string or array
+const normalizeTags = (tags: any): string[] => {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags.map(t => (t == null ? '' : String(t)));
+  if (typeof tags === 'string') {
+    try {
+      const parsed = JSON.parse(tags);
+      return Array.isArray(parsed) ? parsed.map(t => (t == null ? '' : String(t))) : [];
+    } catch {
+      // If tags is a simple comma-separated string, split it
+      return tags.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
+const filteredImages = (images ?? []).filter(img => {
+  const customer = safe((img as any).customerName ?? (img as any).customer_name);
+  const category = safe((img as any).category);
+  const phone = safe((img as any).phone);
+  const tags = normalizeTags((img as any).tags);
+
+  const tagsMatch = tags.some(t => safe(t).includes(query));
+
+  return (
+    customer.includes(query) ||
+    category.includes(query) ||
+    phone.includes(query) ||
+    tagsMatch
+  );
+});
 
   const stats = {
     total: images.length,

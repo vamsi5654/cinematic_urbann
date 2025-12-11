@@ -119,20 +119,45 @@ export default function Gallery() {
       });
       
       // Convert images to projects format
-      const convertedProjects: Project[] = images.map(img => ({
-        id: img.id,
-        title: `${img.category} Project - ${img.customerName}`,
-        category: img.category,
-        imageUrl: img.imageUrl,
-        images: [img.imageUrl],
-        location: 'New York', // Default location
-        year: new Date(img.uploadedAt).getFullYear().toString(),
-        area: '400 sq ft', // Default area
-        materials: img.tags,
-        description: img.description || `Beautiful ${img.category.toLowerCase()} design`,
-        tags: img.tags,
-        featured: false
-      }));
+// helper to safely coerce to string and lowercase
+const safe = (v: any) => (v == null ? '' : String(v));
+
+// map images -> projects (defensive)
+const convertedProjects: Project[] = images.map(img => {
+  const category = safe(img.category);
+  const customer = safe((img as any).customerName ?? img.customer_name);
+  const uploadedAt = img.uploadedAt ? new Date(img.uploadedAt) : null;
+  const year = uploadedAt ? String(uploadedAt.getFullYear()) : '—';
+
+  // normalize tags: prefer array, else try parse, else empty
+  let tagsArr: string[] = [];
+  if (Array.isArray(img.tags)) tagsArr = img.tags.map(t => safe(t));
+  else if (typeof img.tags === 'string') {
+    try {
+      const parsed = JSON.parse(img.tags);
+      if (Array.isArray(parsed)) tagsArr = parsed.map(t => safe(t));
+      else tagsArr = img.tags.split(',').map((s: string) => s.trim()).filter(Boolean);
+    } catch {
+      tagsArr = img.tags.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+  }
+
+  return {
+    id: img.id,
+    title: `${category ? category : 'Project'} Project - ${customer || 'Client'}`,
+    category: category || 'Unknown',
+    imageUrl: img.imageUrl || '',
+    images: img.imageUrl ? [img.imageUrl] : [],
+    location: 'New York',
+    year,
+    area: '400 sq ft',
+    materials: tagsArr,
+    description: img.description || `Beautiful ${category.toLowerCase() || 'design'}`,
+    tags: tagsArr,
+    featured: false
+  } as Project;
+});
+
       
       setProjects(convertedProjects);
     } catch (err) {
