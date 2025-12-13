@@ -95,7 +95,7 @@ const mockProjects: Project[] = [
     featured: false
   },
   {
-    id: '5',
+    id: '7',
     title: 'Contemporary Bedroom Cupbordes',
     category: 'Bedroom Cupbordes',
     imageUrl: 'https://pub-7a6f0b58834843b5a59c1ea8c38fe6c1.r2.dev/1765567652431-b95ab933-2e83-4825-8251-79b6992f5df4.jpg',
@@ -162,6 +162,8 @@ const convertedProjects: Project[] = images.map(img => {
   img.public_url ||
   '';
 
+  console.log("IMAGE URL FROM API:", img.image_url);
+
   return {
     id: img.id,
     title: `${category ? category : 'Project'} Project - ${customer || 'Client'}`,
@@ -179,7 +181,7 @@ const convertedProjects: Project[] = images.map(img => {
   } as Project;
 });
 
-      console.log("IMAGE URL FROM API:", img.image_url);
+      
 
       setProjects(convertedProjects);
     } catch (err) {
