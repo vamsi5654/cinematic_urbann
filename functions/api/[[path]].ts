@@ -251,11 +251,19 @@ async function handleGetImages(request: Request, env: Env, headers: Record<strin
   const { results } = await env.DB.prepare(query).bind(...params).all();
   
   // Parse JSON fields
-  const images = results.map(img => ({
-    ...img,
-    tags: JSON.parse(img.tags as string || '[]'),
-    uploadedAt: img.uploaded_at
-  }));
+const images = results.map(img => ({
+  id: img.id,
+  publicId: img.public_id,
+  imageUrl: img.image_url,          // ✅ camelCase
+  customerName: img.customer_name,  // ✅ camelCase
+  phone: img.phone,
+  category: img.category,
+  tags: JSON.parse(img.tags as string || '[]'),
+  description: img.description,
+  status: img.status,
+  uploadedAt: img.uploaded_at       // ✅ camelCase
+}));
+
 
   return new Response(JSON.stringify({ images }), {
     status: 200,

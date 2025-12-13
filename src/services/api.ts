@@ -1,6 +1,8 @@
 // API Service Layer - Frontend integration with Cloudflare Workers
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = typeof window !== 'undefined' && (window as any).__ENV__?.VITE_API_URL 
+  ? (window as any).__ENV__.VITE_API_URL 
+  : '/api';
 
 // Types
 export interface ImageUpload {
@@ -13,7 +15,7 @@ export interface ImageUpload {
   tags: string[];
   description?: string;
   uploadedAt: Date;
-  uploadedBy: string;
+  uploadedBy?: string;
   status: 'draft' | 'published';
 }
 
@@ -125,30 +127,57 @@ export async function uploadImage(
 
   const data = await response.json();
   return {
-    ...data.image,
-    uploadedAt: new Date(data.image.uploadedAt || Date.now()),
-  };
+  id: data.image.id,
+  imageUrl: data.image.imageUrl,
+  publicId: data.image.publicId,
+  customerName: data.image.customerName,
+  phone: data.image.phone,
+  category: data.image.category,
+  tags: data.image.tags || [],
+  description: data.image.description,
+  status: data.image.status,
+  uploadedAt: new Date(data.image.uploadedAt || Date.now()),
+};
+
 }
 
 // Get Images API
-export async function getImages(params: any) {
-  const query = new URLSearchParams();
-
-  if (params.status) query.append('status', params.status);
-  if (params.category && params.category !== 'All') {
-    query.append('category', params.category);
+export async function getImages(filters?: {
+  status?: 'draft' | 'published' | 'all';
+  category?: string;
+}): Promise<ImageUpload[]> {
+  const params = new URLSearchParams();
+  
+  if (filters?.status && filters.status !== 'all') {
+    params.append('status', filters.status);
+  } else if (!filters?.status) {
+    params.append('status', 'published'); // Default to published for public gallery
+  }
+  
+  if (filters?.category && filters.category !== 'All') {
+    params.append('category', filters.category);
   }
 
-  const res = await fetch(`/api/images?${query.toString()}`);
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch images: ${res.status}`);
+  const response = await fetch(`${API_BASE_URL}/images?${params.toString()}`);
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch images');
   }
 
-  const data = await res.json();
+const data = await response.json();
 
-  // ✅ THIS LINE FIXES EVERYTHING
-  return data.images;
+return data.images.map((img: any) => ({
+  id: img.id,
+  imageUrl: img.imageUrl,          // ✅ single source of truth
+  publicId: img.publicId,
+  customerName: img.customerName,
+  phone: img.phone,
+  category: img.category,
+  tags: img.tags || [],
+  description: img.description,
+  status: img.status,
+  uploadedAt: new Date(img.uploadedAt || Date.now()),
+}));
 }
 
 
