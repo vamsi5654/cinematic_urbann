@@ -156,12 +156,18 @@ const convertedProjects: Project[] = images.map(img => {
     }
   }
 
+  const resolvedImageUrl =
+  img.imageUrl ||
+  img.image_url ||
+  img.public_url ||
+  '';
+
   return {
     id: img.id,
     title: `${category ? category : 'Project'} Project - ${customer || 'Client'}`,
     category: category || 'Unknown',
-    imageUrl: img.imageUrl || '',
-    images: img.imageUrl ? [img.imageUrl] : [],
+    imageUrl: resolvedImageUrl,
+    images: resolvedImageUrl ? [resolvedImageUrl] : [],
     location: 'New York',
     year,
     area: '400 sq ft',
