@@ -174,11 +174,13 @@ const convertedProjects: Project[] = images.map(img => {
     materials: tagsArr,
     description: img.description || `Beautiful ${category.toLowerCase() || 'design'}`,
     tags: tagsArr,
-    featured: false
+    featured: false,
+    
   } as Project;
 });
 
-      
+      console.log("IMAGE URL FROM API:", img.image_url);
+
       setProjects(convertedProjects);
     } catch (err) {
       console.error('Error loading projects:', err);
