@@ -298,6 +298,14 @@ const filteredImages = (images ?? []).filter(img => {
     );
   }
 
+  //image url resolver
+  const resolveImageUrl = (image: any) =>
+  image.imageUrl ||
+  image.image_url ||
+  image.public_url ||
+  '';
+
+
   return (
     <div className={styles.admin}>
       <div className={styles.container}>
@@ -387,7 +395,10 @@ const filteredImages = (images ?? []).filter(img => {
                 transition={{ duration: 0.4, delay: index * 0.05 }}
               >
                 <div className={styles.imagePreview}>
-                  <ImageWithFallback src={image.imageUrl} alt={image.customerName} />
+                  <ImageWithFallback
+                      src={resolveImageUrl(image)}
+                      alt={image.customerName}
+                    />
                   <span 
                     className={`${styles.statusBadge} ${styles[image.status]}`}
                     onClick={() => handleToggleStatus(image)}
