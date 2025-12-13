@@ -198,7 +198,8 @@ async function handleUpload(request: Request, env: Env, headers: Record<string, 
   });
 
   // Generate public URL (you'll need to set up a custom domain for R2)
-  const imageUrl = `https://images.your-domain.com/${fileName}`;
+  const imageUrl = `https://pub-7a6f0b58834843b5a59c1ea8c38fe6c1.r2.dev/${fileName}`;
+
   
   // Save metadata to D1
   const imageId = crypto.randomUUID();
