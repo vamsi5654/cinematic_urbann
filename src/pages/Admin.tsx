@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Upload, Search, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, Search, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus, Check, CheckCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
-import { ImageUpload, ScheduledEvent, ContactSubmission } from '../types';
+import { ImageUpload, ScheduledEvent, ContactSubmission } from '../types/index';
 import * as api from '../services/api';
 import styles from './Admin.module.css';
 
@@ -17,6 +17,7 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(!api.isAuthenticated());
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -35,13 +36,25 @@ export default function Admin() {
     description: '',
     status: 'draft' as 'draft' | 'published'
   });
+
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    message: '',
+    imageUrl: '',
+    scheduledDate: '',
+    scheduledTime: '',
+    active: true
+  });
+
   const [tagInput, setTagInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Load images on mount
+  // Load data on mount and tab change
   useEffect(() => {
     if (api.isAuthenticated()) {
       loadImages();
+      loadEvents();
+      loadContacts();
     }
   }, [statusFilter]);
 
@@ -61,12 +74,32 @@ export default function Admin() {
     }
   };
 
+  const loadEvents = async () => {
+    try {
+      const fetchedEvents = await api.getEvents();
+      setEvents(fetchedEvents);
+    } catch (err) {
+      console.error('Error loading events:', err);
+    }
+  };
+
+  const loadContacts = async () => {
+    try {
+      const fetchedContacts = await api.getContactSubmissions();
+      setContacts(fetchedContacts);
+    } catch (err) {
+      console.error('Error loading contacts:', err);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.login(loginForm.username, loginForm.password);
       setShowLoginModal(false);
       loadImages();
+      loadEvents();
+      loadContacts();
     } catch (err) {
       alert('Login failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
@@ -76,45 +109,16 @@ export default function Admin() {
     api.logout();
     setShowLoginModal(true);
     setImages([]);
+    setEvents([]);
+    setContacts([]);
   };
 
-// Safe helper: always returns a lowercase string
-const safe = (v: any) => (v == null ? '' : String(v)).toLowerCase();
-
-// Normalize search once
-const query = safe(searchQuery);
-
-// Helper to normalize tags from either JSON string or array
-const normalizeTags = (tags: any): string[] => {
-  if (!tags) return [];
-  if (Array.isArray(tags)) return tags.map(t => (t == null ? '' : String(t)));
-  if (typeof tags === 'string') {
-    try {
-      const parsed = JSON.parse(tags);
-      return Array.isArray(parsed) ? parsed.map(t => (t == null ? '' : String(t))) : [];
-    } catch {
-      // If tags is a simple comma-separated string, split it
-      return tags.split(',').map(s => s.trim()).filter(Boolean);
-    }
-  }
-  return [];
-};
-
-const filteredImages = (images ?? []).filter(img => {
-  const customer = safe((img as any).customerName ?? (img as any).customer_name);
-  const category = safe((img as any).category);
-  const phone = safe((img as any).phone);
-  const tags = normalizeTags((img as any).tags);
-
-  const tagsMatch = tags.some(t => safe(t).includes(query));
-
-  return (
-    customer.includes(query) ||
-    category.includes(query) ||
-    phone.includes(query) ||
-    tagsMatch
-  );
-});
+  // Image handlers
+  const filteredImages = images.filter(img => {
+    const matchesSearch = img.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         img.category.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   const stats = {
     total: images.length,
@@ -177,7 +181,6 @@ const filteredImages = (images ?? []).filter(img => {
       setIsUploading(true);
       setUploadProgress(0);
 
-      // Simulate progress (real progress would need server-sent events or polling)
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => Math.min(prev + 10, 90));
       }, 200);
@@ -193,11 +196,8 @@ const filteredImages = (images ?? []).filter(img => {
 
       clearInterval(progressInterval);
       setUploadProgress(100);
-
-      // Add to list
       setImages([newImage, ...images]);
 
-      // Reset form
       setTimeout(() => {
         setUploadForm({
           customerName: '',
@@ -244,6 +244,67 @@ const filteredImages = (images ?? []).filter(img => {
     }
   };
 
+  // Event handlers
+  const handleCreateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createEvent(eventForm);
+      await loadEvents();
+      setEventForm({
+        title: '',
+        message: '',
+        imageUrl: '',
+        scheduledDate: '',
+        scheduledTime: '',
+        active: true
+      });
+      setShowEventModal(false);
+    } catch (err) {
+      alert('Failed to create event: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleToggleEventActive = async (event: ScheduledEvent) => {
+    try {
+      await api.updateEvent(event.id, { active: !event.active });
+      await loadEvents();
+    } catch (err) {
+      alert('Failed to update event: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      try {
+        await api.deleteEvent(id);
+        setEvents(events.filter(e => e.id !== id));
+      } catch (err) {
+        alert('Delete failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      }
+    }
+  };
+
+  // Contact handlers
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await api.markContactAsRead(id);
+      setContacts(contacts.map(c => 
+        c.id === id ? { ...c, readStatus: true } : c
+      ));
+    } catch (err) {
+      alert('Failed to mark as read: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    }
+  };
+
+  const filteredContacts = contacts.filter(contact => {
+    if (!searchQuery) return true;
+    return contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           contact.projectType.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const unreadCount = contacts.filter(c => !c.readStatus).length;
+
   // Login Modal
   if (showLoginModal) {
     return (
@@ -261,6 +322,13 @@ const filteredImages = (images ?? []).filter(img => {
           >
             <div className={styles.modalHeader}>
               <h2>Admin Login</h2>
+              <button 
+                className={styles.closeBtn} 
+                onClick={() => window.history.back()}
+                title="Go back"
+              >
+                <X size={24} />
+              </button>
             </div>
             <form onSubmit={handleLogin} className={styles.uploadForm}>
               <div className={styles.formGroup}>
@@ -298,12 +366,12 @@ const filteredImages = (images ?? []).filter(img => {
     );
   }
 
-  //image url resolver
   const resolveImageUrl = (image: any) =>
   image.imageUrl ||
   image.image_url ||
   image.public_url ||
   '';
+
 
 
   return (
@@ -316,126 +384,314 @@ const filteredImages = (images ?? []).filter(img => {
               <LogOut size={18} />
               Logout
             </Button>
-            <Button variant="primary" onClick={() => setShowUploadModal(true)}>
-              <Upload size={18} />
-              Upload Image
-            </Button>
+            {activeTab === 'images' && (
+              <Button variant="primary" onClick={() => setShowUploadModal(true)}>
+                <Upload size={18} />
+                Upload Image
+              </Button>
+            )}
+            {activeTab === 'events' && (
+              <Button variant="primary" onClick={() => setShowEventModal(true)}>
+                <Plus size={18} />
+                Create Event
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className={styles.dashboard}>
-          <div className={styles.statCard}>
-            <h3>Total Images</h3>
-            <div className={styles.value}>{stats.total}</div>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Published</h3>
-            <div className={styles.value}>{stats.published}</div>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Drafts</h3>
-            <div className={styles.value}>{stats.draft}</div>
-          </div>
+        {/* Tab Navigation */}
+        <div className={styles.tabs}>
+          <button
+            className={`${styles.tab} ${activeTab === 'images' ? styles.active : ''}`}
+            onClick={() => setActiveTab('images')}
+          >
+            <ImageIcon size={20} />
+            Images ({images.length})
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'events' ? styles.active : ''}`}
+            onClick={() => setActiveTab('events')}
+          >
+            <Calendar size={20} />
+            Events ({events.length})
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'contacts' ? styles.active : ''}`}
+            onClick={() => setActiveTab('contacts')}
+          >
+            <Mail size={20} />
+            Contacts ({contacts.length})
+            {unreadCount > 0 && (
+              <span className={styles.badge}>{unreadCount}</span>
+            )}
+          </button>
         </div>
 
-        <div className={styles.controls}>
-          <div className={styles.searchBox}>
-            <input
-              type="text"
-              placeholder="Search by customer name or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className={styles.filterButtons}>
-            <button
-              className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.active : ''}`}
-              onClick={() => setStatusFilter('all')}
-            >
-              All
-            </button>
-            <button
-              className={`${styles.filterBtn} ${statusFilter === 'published' ? styles.active : ''}`}
-              onClick={() => setStatusFilter('published')}
-            >
-              Published
-            </button>
-            <button
-              className={`${styles.filterBtn} ${statusFilter === 'draft' ? styles.active : ''}`}
-              onClick={() => setStatusFilter('draft')}
-            >
-              Drafts
-            </button>
-          </div>
-        </div>
+        {/* Images Tab */}
+        {activeTab === 'images' && (
+          <>
+            <div className={styles.dashboard}>
+              <div className={styles.statCard}>
+                <h3>Total Images</h3>
+                <div className={styles.value}>{stats.total}</div>
+              </div>
+              <div className={styles.statCard}>
+                <h3>Published</h3>
+                <div className={styles.value}>{stats.published}</div>
+              </div>
+              <div className={styles.statCard}>
+                <h3>Drafts</h3>
+                <div className={styles.value}>{stats.draft}</div>
+              </div>
+            </div>
 
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px' }}>
-            <p>Loading images...</p>
-          </div>
-        ) : error ? (
-          <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-warm-sand)' }}>
-            <p>{error}</p>
-            <Button variant="ghost" onClick={loadImages} style={{ marginTop: '16px' }}>
-              Retry
-            </Button>
-          </div>
-        ) : filteredImages.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px' }}>
-            <p>No images found. Upload your first image to get started!</p>
-          </div>
-        ) : (
-          <div className={styles.imageGrid}>
-            {filteredImages.map((image, index) => (
-              <motion.div
-                key={image.id}
-                className={styles.imageCard}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
-              >
-                <div className={styles.imagePreview}>
-                  <ImageWithFallback
+            <div className={styles.controls}>
+              <div className={styles.searchBox}>
+                <input
+                  type="text"
+                  placeholder="Search by customer name or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className={styles.filterButtons}>
+                <button
+                  className={`${styles.filterBtn} ${statusFilter === 'all' ? styles.active : ''}`}
+                  onClick={() => setStatusFilter('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={`${styles.filterBtn} ${statusFilter === 'published' ? styles.active : ''}`}
+                  onClick={() => setStatusFilter('published')}
+                >
+                  Published
+                </button>
+                <button
+                  className={`${styles.filterBtn} ${statusFilter === 'draft' ? styles.active : ''}`}
+                  onClick={() => setStatusFilter('draft')}
+                >
+                  Drafts
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <p>Loading images...</p>
+              </div>
+            ) : error ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-warm-sand)' }}>
+                <p>{error}</p>
+                <Button variant="ghost" onClick={loadImages} style={{ marginTop: '16px' }}>
+                  Retry
+                </Button>
+              </div>
+            ) : filteredImages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <p>No images found. Upload your first image to get started!</p>
+              </div>
+            ) : (
+              <div className={styles.imageGrid}>
+                {filteredImages.map((image, index) => (
+                  <motion.div
+                    key={image.id}
+                    className={styles.imageCard}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                  >
+                    <div className={styles.imagePreview}>
+                    <ImageWithFallback
                       src={resolveImageUrl(image)}
                       alt={image.customerName}
                     />
-                  <span 
-                    className={`${styles.statusBadge} ${styles[image.status]}`}
-                    onClick={() => handleToggleStatus(image)}
-                    style={{ cursor: 'pointer' }}
-                    title="Click to toggle status"
+                      <span 
+                        className={`${styles.statusBadge} ${styles[image.status]}`}
+                        onClick={() => handleToggleStatus(image)}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to toggle status"
+                      >
+                        {image.status}
+                      </span>
+                    </div>
+                    <div className={styles.imageInfo}>
+                      <h4>{image.customerName}</h4>
+                      <p className={styles.imageMeta}>
+                        {image.category} • {new Date(image.uploadedAt).toLocaleDateString()}
+                      </p>
+                      <div className={styles.imageActions}>
+                        <button className={styles.iconBtn} title="View">
+                          <Eye size={16} />
+                        </button>
+                        <button className={styles.iconBtn} title="Edit">
+                          <Edit size={16} />
+                        </button>
+                        <button 
+                          className={styles.iconBtn} 
+                          title="Delete"
+                          onClick={() => handleDelete(image.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Events Tab */}
+        {activeTab === 'events' && (
+          <div className={styles.eventsTab}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2>Scheduled Events</h2>
+              <p style={{ opacity: 0.7, marginTop: '8px' }}>Create popup notifications for special occasions</p>
+            </div>
+
+            {events.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <Calendar size={48} style={{ opacity: 0.3, margin: '0 auto 16px' }} />
+                <p>No events scheduled. Create your first event!</p>
+                <Button variant="primary" onClick={() => setShowEventModal(true)} style={{ marginTop: '16px' }}>
+                  <Plus size={18} />
+                  Create Event
+                </Button>
+              </div>
+            ) : (
+              <div className={styles.eventsList}>
+                {events.map((event, index) => (
+                  <motion.div
+                    key={event.id}
+                    className={styles.eventCard}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    {image.status}
-                  </span>
-                </div>
-                <div className={styles.imageInfo}>
-                  <h4>{image.customerName}</h4>
-                  <p className={styles.imageMeta}>
-                    {image.category} • {new Date(image.uploadedAt).toLocaleDateString()}
-                  </p>
-                  <div className={styles.imageActions}>
-                    <button className={styles.iconBtn} title="View">
-                      <Eye size={16} />
-                    </button>
-                    <button className={styles.iconBtn} title="Edit">
-                      <Edit size={16} />
-                    </button>
-                    <button 
-                      className={styles.iconBtn} 
-                      title="Delete"
-                      onClick={() => handleDelete(image.id)}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                    <div className={styles.eventHeader}>
+                      <h3>{event.title}</h3>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className={`${styles.statusBadge} ${event.active ? styles.published : styles.draft}`}>
+                          {event.active ? 'Active' : 'Inactive'}
+                        </span>
+                        <button
+                          className={styles.iconBtn}
+                          onClick={() => handleToggleEventActive(event)}
+                          title={event.active ? 'Deactivate' : 'Activate'}
+                        >
+                          <Eye size={16} />
+                        </button>
+                        <button
+                          className={styles.iconBtn}
+                          onClick={() => handleDeleteEvent(event.id)}
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className={styles.eventMessage}>{event.message}</p>
+                    <div className={styles.eventMeta}>
+                      <span>📅 {event.scheduledDate} at {event.scheduledTime}</span>
+                      <span>Created {new Date(event.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {event.imageUrl && (
+                      <div className={styles.eventImagePreview}>
+                        <img src={event.imageUrl} alt={event.title} />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Contacts Tab */}
+        {activeTab === 'contacts' && (
+          <div className={styles.contactsTab}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2>Contact Submissions</h2>
+              <p style={{ opacity: 0.7, marginTop: '8px' }}>
+                {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'All messages read'}
+              </p>
+            </div>
+
+            <div className={styles.controls} style={{ marginBottom: '24px' }}>
+              <div className={styles.searchBox}>
+                <input
+                  type="text"
+                  placeholder="Search by name, email, or project type..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {filteredContacts.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <Mail size={48} style={{ opacity: 0.3, margin: '0 auto 16px' }} />
+                <p>No contact submissions yet.</p>
+              </div>
+            ) : (
+              <div className={styles.contactsList}>
+                {filteredContacts.map((contact, index) => (
+                  <motion.div
+                    key={contact.id}
+                    className={`${styles.contactCard} ${!contact.readStatus ? styles.unread : ''}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <div className={styles.contactHeader}>
+                      <div>
+                        <h3>{contact.name}</h3>
+                        <p className={styles.contactEmail}>{contact.email}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {!contact.readStatus && (
+                          <button
+                            className={styles.iconBtn}
+                            onClick={() => handleMarkAsRead(contact.id)}
+                            title="Mark as read"
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className={styles.contactDetails}>
+                      <div className={styles.contactRow}>
+                        <strong>Phone:</strong> {contact.phone}
+                      </div>
+                      <div className={styles.contactRow}>
+                        <strong>Project Type:</strong> {contact.projectType}
+                      </div>
+                      <div className={styles.contactRow}>
+                        <strong>Budget:</strong> {contact.budget}
+                      </div>
+                      <div className={styles.contactRow}>
+                        <strong>Timeline:</strong> {contact.timeline}
+                      </div>
+                      <div className={styles.contactRow}>
+                        <strong>Message:</strong>
+                        <p style={{ marginTop: '8px', lineHeight: '1.6' }}>{contact.message}</p>
+                      </div>
+                    </div>
+                    <div className={styles.contactFooter}>
+                      <span>Submitted {new Date(contact.submittedAt).toLocaleString()}</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Upload Modal */}
+      {/* Upload Image Modal */}
       <AnimatePresence>
         {showUploadModal && (
           <motion.div
@@ -601,6 +857,123 @@ const filteredImages = (images ?? []).filter(img => {
                     disabled={!selectedFile || isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Upload'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Create Event Modal */}
+      <AnimatePresence>
+        {showEventModal && (
+          <motion.div
+            className={styles.modalOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowEventModal(false)}
+          >
+            <motion.div
+              className={styles.modal}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '500px' }}
+            >
+              <div className={styles.modalHeader}>
+                <h2>Create Scheduled Event</h2>
+                <button 
+                  className={styles.closeBtn} 
+                  onClick={() => setShowEventModal(false)}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateEvent} className={styles.uploadForm}>
+                <div className={styles.formGroup}>
+                  <label htmlFor="eventTitle">Event Title *</label>
+                  <input
+                    id="eventTitle"
+                    type="text"
+                    required
+                    value={eventForm.title}
+                    onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                    placeholder="e.g., Independence Day Special"
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="eventMessage">Message *</label>
+                  <textarea
+                    id="eventMessage"
+                    required
+                    value={eventForm.message}
+                    onChange={(e) => setEventForm({ ...eventForm, message: e.target.value })}
+                    placeholder="Enter the message to display in the popup"
+                    rows={4}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="eventImage">Image URL (optional)</label>
+                  <input
+                    id="eventImage"
+                    type="url"
+                    value={eventForm.imageUrl}
+                    onChange={(e) => setEventForm({ ...eventForm, imageUrl: e.target.value })}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="eventDate">Scheduled Date *</label>
+                    <input
+                      id="eventDate"
+                      type="date"
+                      required
+                      value={eventForm.scheduledDate}
+                      onChange={(e) => setEventForm({ ...eventForm, scheduledDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label htmlFor="eventTime">Scheduled Time *</label>
+                    <input
+                      id="eventTime"
+                      type="time"
+                      required
+                      value={eventForm.scheduledTime}
+                      onChange={(e) => setEventForm({ ...eventForm, scheduledTime: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={eventForm.active}
+                      onChange={(e) => setEventForm({ ...eventForm, active: e.target.checked })}
+                    />
+                    Active (will show on scheduled date/time)
+                  </label>
+                </div>
+
+                <div className={styles.modalActions}>
+                  <Button 
+                    variant="ghost" 
+                    type="button" 
+                    onClick={() => setShowEventModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button variant="primary" type="submit">
+                    Create Event
                   </Button>
                 </div>
               </form>
