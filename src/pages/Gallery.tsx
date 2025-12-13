@@ -93,10 +93,24 @@ const mockProjects: Project[] = [
     description: 'Warm dining area',
     tags: ['cozy', 'inviting'],
     featured: false
-  }
+  },
+  {
+    id: '5',
+    title: 'Contemporary Bedroom Cupbordes',
+    category: 'Bedroom Cupbordes',
+    imageUrl: 'https://pub-7a6f0b58834843b5a59c1ea8c38fe6c1.r2.dev/1765567652431-b95ab933-2e83-4825-8251-79b6992f5df4.jpg',
+    images: [],
+    location: 'Tribeca, NY',
+    year: '2024',
+    area: '380 sq ft',
+    materials: ['Glass', 'Steel', 'Concrete'],
+    description: 'Modern workspace design',
+    tags: ['modern', 'professional'],
+    featured: false
+  },
 ];
 
-const categories = ['All', 'Kitchen', 'Living', 'Bedroom', 'Full Home', 'Bathroom', 'Office'];
+const categories = ['All', 'Kitchen', 'Living', 'Bedroom', 'Full Home', 'Bathroom', 'Office', 'Bedroom Cupbordes'];
 
 export default function Gallery() {
   const [selectedCategory, setSelectedCategory] = useState('All');

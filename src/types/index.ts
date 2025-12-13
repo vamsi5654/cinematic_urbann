@@ -3,7 +3,7 @@
 export interface Project {
   id: string;
   title: string;
-  category: 'Kitchen' | 'Living' | 'Bedroom' | 'Full Home' | 'Bathroom' | 'Office';
+  category: 'Kitchen' | 'Living' | 'Bedroom' | 'Full Home' | 'Bathroom' | 'Office' | 'Bedroom Cupbordes';
   imageUrl: string;
   images: string[];
   location: string;

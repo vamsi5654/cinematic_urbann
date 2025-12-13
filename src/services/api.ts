@@ -131,34 +131,26 @@ export async function uploadImage(
 }
 
 // Get Images API
-export async function getImages(filters?: {
-  status?: 'draft' | 'published' | 'all';
-  category?: string;
-}): Promise<ImageUpload[]> {
-  const params = new URLSearchParams();
-  
-  if (filters?.status && filters.status !== 'all') {
-    params.append('status', filters.status);
-  } else if (!filters?.status) {
-    params.append('status', 'published'); // Default to published for public gallery
-  }
-  
-  if (filters?.category && filters.category !== 'All') {
-    params.append('category', filters.category);
+export async function getImages(params: any) {
+  const query = new URLSearchParams();
+
+  if (params.status) query.append('status', params.status);
+  if (params.category && params.category !== 'All') {
+    query.append('category', params.category);
   }
 
-  const response = await fetch(`${API_BASE_URL}/images?${params.toString()}`);
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch images');
+  const res = await fetch(`/api/images?${query.toString()}`);
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch images: ${res.status}`);
   }
 
-  const data = await response.json();
-  return data.images.map((img: any) => ({
-    ...img,
-    uploadedAt: new Date(img.uploadedAt),
-  }));
+  const data = await res.json();
+
+  // ✅ THIS LINE FIXES EVERYTHING
+  return data.images;
 }
+
 
 // Delete Image API
 export async function deleteImage(imageId: string): Promise<void> {
