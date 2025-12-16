@@ -265,34 +265,70 @@ const images = results.map((img: any) => ({
 }
 
 // Create Event
+// Create Event
 async function handleCreateEvent(
   request: Request,
   env: Env,
   headers: Record<string, string>
 ) {
+  // 🔐 Auth check (REQUIRED)
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
   const body = await request.json();
+
+  const {
+    title,
+    message,
+    imageUrl,
+    scheduledDate,
+    scheduledTime,
+    active
+  } = body;
+
+  // ✅ Validation
+  if (!title || !message || !scheduledDate || !scheduledTime) {
+    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      status: 400,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
 
   await env.DB.prepare(`
     INSERT INTO events (
-      id, title, message, image_url,
-      scheduled_date, scheduled_time, active
+      id,
+      title,
+      message,
+      image_url,
+      scheduled_date,
+      scheduled_time,
+      active
     )
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).bind(
     crypto.randomUUID(),
-    body.title,
-    body.message,
-    body.imageUrl || null,
-    body.scheduledDate,
-    body.scheduledTime,
-    body.active ? 1 : 0
+    title,
+    message,
+    imageUrl || null,
+    scheduledDate,
+    scheduledTime,
+    active ? 1 : 0
   ).run();
 
   return new Response(
     JSON.stringify({ success: true }),
-    { headers: { ...headers, 'Content-Type': 'application/json' } }
+    {
+      status: 200,
+      headers: { ...headers, 'Content-Type': 'application/json' }
+    }
   );
 }
+
 
 // Get Events
 async function handleGetEvents(
