@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ContactFormData } from '../types';
@@ -83,8 +83,8 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Visit Us</h3>
                 <p>
-                  123 Design Street, Suite 100<br />
-                  New York, NY 10001
+                  6th Floor, The 27 Building, DLF Rd, Jayabheri Enclave,<br />
+              Gachibowli, Hyderabad, Telangana 500032
                 </p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Call Us</h3>
                 <p>
-                  <a href="tel:+1234567890">+1 (234) 567-890</a>
+                  <a href="tel:+1234567890">+91 8977978321</a>
                 </p>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Email Us</h3>
                 <p>
-                  <a href="mailto:hello@theurbann.com">hello@theurbann.com</a>
+                  <a href="mailto:hello@theurbann.com">Urbann2009@gmail.com</a>
                 </p>
               </div>
             </div>
@@ -128,15 +128,13 @@ export default function Contact() {
             </div>
 
             <div className={styles.socialLinks}>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a href="https://www.instagram.com/Urbann_interiors/#" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                 <Instagram size={20} />
               </a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a href="https://www.instagram.com/Urbann_interiors/#" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                 <Facebook size={20} />
               </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
-                <Linkedin size={20} />
-              </a>
+              
             </div>
           </div>
 
@@ -211,10 +209,10 @@ export default function Contact() {
                     onChange={handleChange}
                   >
                     <option value="">Select budget range</option>
-                    <option value="under-50k">Under $50,000</option>
-                    <option value="50k-100k">$50,000 - $100,000</option>
-                    <option value="100k-250k">$100,000 - $250,000</option>
-                    <option value="250k-plus">$250,000+</option>
+                    <option value="under-50k">Under ₹50,000</option>
+                    <option value="50k-100k">₹50,000 - ₹100,000</option>
+                    <option value="100k-250k">₹100,000 - ₹250,000</option>
+                    <option value="250k-plus">₹250,000+</option>
                   </select>
                 </div>
                 <div className={styles.formGroup}>

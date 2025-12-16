@@ -8,7 +8,6 @@ import { Project } from '../types';
 import * as api from '../services/api';
 import styles from './Gallery.module.css';
 
-
 const mockProjects: Project[] = [
   {
     id: '1',
@@ -93,24 +92,10 @@ const mockProjects: Project[] = [
     description: 'Warm dining area',
     tags: ['cozy', 'inviting'],
     featured: false
-  },
-  {
-    id: '7',
-    title: 'Contemporary Bedroom Cupbordes',
-    category: 'Bedroom Cupbordes',
-    imageUrl: 'https://pub-7a6f0b58834843b5a59c1ea8c38fe6c1.r2.dev/1765567652431-b95ab933-2e83-4825-8251-79b6992f5df4.jpg',
-    images: [],
-    location: 'Tribeca, NY',
-    year: '2024',
-    area: '380 sq ft',
-    materials: ['Glass', 'Steel', 'Concrete'],
-    description: 'Modern workspace design',
-    tags: ['modern', 'professional'],
-    featured: false
-  },
+  }
 ];
 
-const categories = ['All', 'Kitchen', 'Living', 'Bedroom', 'Full Home', 'Bathroom', 'Office', 'Bedroom Cupbordes'];
+const categories = ['All', 'Kitchen', 'Living', 'Bedroom', 'Full Home', 'Bathroom', 'Office'];
 
 export default function Gallery() {
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -132,57 +117,35 @@ export default function Gallery() {
         category: selectedCategory 
       });
       
-      // Convert images to projects format
-// helper to safely coerce to string and lowercase
-const safe = (v: any) => (v == null ? '' : String(v));
-
-// map images -> projects (defensive)
-const convertedProjects: Project[] = images.map(img => {
-  const category = safe(img.category);
-  const customer = safe((img as any).customerName ?? img.customer_name);
-  const uploadedAt = img.uploadedAt ? new Date(img.uploadedAt) : null;
-  const year = uploadedAt ? String(uploadedAt.getFullYear()) : '—';
-
-  // normalize tags: prefer array, else try parse, else empty
-  let tagsArr: string[] = [];
-  if (Array.isArray(img.tags)) tagsArr = img.tags.map(t => safe(t));
-  else if (typeof img.tags === 'string') {
-    try {
-      const parsed = JSON.parse(img.tags);
-      if (Array.isArray(parsed)) tagsArr = parsed.map(t => safe(t));
-      else tagsArr = img.tags.split(',').map((s: string) => s.trim()).filter(Boolean);
-    } catch {
-      tagsArr = img.tags.split(',').map((s: string) => s.trim()).filter(Boolean);
-    }
-  }
-
-  const resolvedImageUrl =
-  img.imageUrl ||
-  img.image_url ||
-  img.public_url ||
-  '';
-
-  console.log("IMAGE URL FROM API:", img.image_url);
-
-  return {
-    id: img.id,
-    title: `${category ? category : 'Project'} Project - ${customer || 'Client'}`,
-    category: category || 'Unknown',
-    imageUrl: resolvedImageUrl,
-    images: resolvedImageUrl ? [resolvedImageUrl] : [],
-    location: 'New York',
-    year,
-    area: '400 sq ft',
-    materials: tagsArr,
-    description: img.description || `Beautiful ${category.toLowerCase() || 'design'}`,
-    tags: tagsArr,
-    featured: false,
-    
-  } as Project;
-});
-
+      // Convert images to projects format and group by projectId
+      const projectsMap = new Map<string, Project>();
       
-
+      images.forEach(img => {
+        const projectId = img.projectId || img.id;
+        
+        if (!projectsMap.has(projectId)) {
+          projectsMap.set(projectId, {
+            id: projectId,
+            title: `${img.customerName} - ${img.category}`,
+            category: img.category,
+            imageUrl: img.imageUrl,
+            images: img.imageUrl ? [img.imageUrl] : [],
+            location: 'New York',
+            year: new Date(img.uploadedAt).getFullYear().toString(),
+            area: '400 sq ft',
+            materials: img.tags,
+            description: img.description || `Beautiful ${img.category.toLowerCase()} design for ${img.customerName}`,
+            tags: img.tags,
+            featured: false
+          });
+        } else {
+          // Add image to existing project
+          const existingProject = projectsMap.get(projectId)!;
+          existingProject.images.push(img.imageUrl);
+        }
+      });
+      
+      const convertedProjects = Array.from(projectsMap.values());
       setProjects(convertedProjects);
     } catch (err) {
       console.error('Error loading projects:', err);

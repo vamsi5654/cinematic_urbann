@@ -121,7 +121,45 @@
 }
 
 .mobileNav {
-  display: none;
+  display: block;
+  position: fixed;
+  top: 88px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-charcoal);
+  padding: 48px 24px;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999;
+  overflow-y: auto;
+}
+
+.mobileNav.open {
+  transform: translateX(0);
+}
+
+.mobileNavLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.mobileNavLink {
+  font-size: 24px;
+  font-family: var(--font-heading);
+  opacity: 0.8;
+  transition: var(--transition-fast);
+}
+
+.mobileNavLink:hover,
+.mobileNavLink.active {
+  opacity: 1;
+  color: var(--color-warm-sand);
+}
+
+.mobileNavCta {
+  margin-top: 48px;
 }
 
 @media (max-width: 968px) {
@@ -136,7 +174,7 @@
   .mobileNav {
     display: block;
     position: fixed;
-    top: 120px;
+    top: 88px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -144,6 +182,8 @@
     padding: 48px 24px;
     transform: translateX(100%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
+    overflow-y: auto;
   }
   
   .mobileNav.open {

@@ -1,19 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeft, MapPin, Calendar, Ruler } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import styles from './ProjectDetail.module.css';
+import * as api from '../services/api';
 
 export default function ProjectDetail() {
   const { id } = useParams();
   const [activeImage, setActiveImage] = useState(0);
   const [sliderPosition, setSliderPosition] = useState(50);
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock project data
-  const project = {
+  // Load project data
+  useEffect(() => {
+    loadProject();
+  }, [id]);
+
+  const loadProject = async () => {
+    if (!id) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const projectData = await api.getProjectById(id);
+      setProject(projectData);
+    } catch (err) {
+      console.error('Error loading project:', err);
+      setError('Failed to load project details');
+      // Fallback to mock data
+      setProject(mockProject);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock project data as fallback
+  const mockProject = {
     id: id || '1',
+    customerName: 'Sample Customer',
     title: 'Modern Minimalist Kitchen',
     category: 'Kitchen',
     description: 'A complete transformation of a dated kitchen into a contemporary culinary haven. We focused on maximizing natural light, creating seamless storage solutions, and introducing warm wood tones to balance the clean white surfaces. The result is a space that feels both sophisticated and inviting—a true heart of the home.',
@@ -25,10 +53,11 @@ export default function ProjectDetail() {
       'https://images.unsplash.com/photo-1668026694348-b73c5eb5e299?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBraXRjaGVuJTIwaW50ZXJpb3IlMjBkZXNpZ258ZW58MXx8fHwxNzY0NjQ4ODU1fDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1628602813528-0264682cdc87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwYmF0aHJvb20lMjBkZXNpZ258ZW58MXx8fHwxNzY0NjkzNTQwfDA&ixlib=rb-4.1.0&q=80&w=1080',
       'https://images.unsplash.com/photo-1611094016919-36b65678f3d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBsaXZpbmclMjByb29tJTIwaW50ZXJpb3J8ZW58MXx8fHwxNzY0NjI2NzA2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      'https://images.unsplash.com/photo-1763478958711-dd84b33cfe16?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwYmVkcm9vbSUyMGludGVyaW9yfGVufDF8fHx8MTc2NDU3OTUxN3ww&ixlib=rb-4.1.0&q=80&w=1080'
     ],
     beforeImage: 'https://images.unsplash.com/photo-1578177154072-bbbd429d496f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxraXRjaGVuJTIwcmVub3ZhdGlvbiUyMGJlZm9yZXxlbnwxfHx8fDE3NjQ2MzExMjZ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    afterImage: 'https://images.unsplash.com/photo-1708915965975-2a950db0e215?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBraXRjaGVuJTIwcmVub3ZhdGlvbiUyMGFmdGVyfGVufDF8fHx8MTc2NDY5MzY3OHww&ixlib=rb-4.1.0&q=80&w=1080'
+    afterImage: 'https://images.unsplash.com/photo-1708915965975-2a950db0e215?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBraXRjaGVuJTIwcmVub3ZhdGlvbiUyMGFmdGVyfGVufDF8fHx8MTc2NDY5MzY3OHww&ixlib=rb-4.1.0&q=80&w=1080',
+    categories: ['Kitchen'],
+    allImages: []
   };
 
   const relatedProjects = [
@@ -53,6 +82,36 @@ export default function ProjectDetail() {
     setSliderPosition(Math.max(0, Math.min(100, percentage)));
   };
 
+  if (loading) {
+    return (
+      <div className={styles.projectDetail}>
+        <div className={styles.container} style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <p>Loading project details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !project) {
+    return (
+      <div className={styles.projectDetail}>
+        <div className={styles.container} style={{ textAlign: 'center', padding: '100px 20px' }}>
+          <p>{error}</p>
+          <Link to="/gallery">
+            <Button variant="primary" style={{ marginTop: '20px' }}>Back to Gallery</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const displayProject = project || mockProject;
+  const projectImages = displayProject.allImages?.length > 0 
+    ? displayProject.allImages 
+    : displayProject.images || [];
+  const projectTitle = displayProject.title || `${displayProject.customerName} - ${displayProject.category}`;
+  const projectMaterials = displayProject.materials || displayProject.categories || [];
+
   return (
     <div className={styles.projectDetail}>
       <div className={styles.container}>
@@ -69,16 +128,16 @@ export default function ProjectDetail() {
         >
           <div className={styles.imageSection}>
             <ImageWithFallback
-              src={project.images[activeImage]}
-              alt={project.title}
+              src={projectImages[activeImage]}
+              alt={projectTitle}
               className={styles.mainImage}
             />
             <div className={styles.thumbnails}>
-              {project.images.map((image, index) => (
+              {projectImages.map((image, index) => (
                 <ImageWithFallback
                   key={index}
                   src={image}
-                  alt={`${project.title} ${index + 1}`}
+                  alt={`${projectTitle} ${index + 1}`}
                   className={`${styles.thumbnail} ${activeImage === index ? styles.active : ''}`}
                   onClick={() => setActiveImage(index)}
                 />
@@ -87,9 +146,9 @@ export default function ProjectDetail() {
           </div>
 
           <div className={styles.infoSection}>
-            <div className={styles.category}>{project.category}</div>
-            <h1 className={styles.title}>{project.title}</h1>
-            <p className={styles.description}>{project.description}</p>
+            <div className={styles.category}>{displayProject.category}</div>
+            <h1 className={styles.title}>{projectTitle}</h1>
+            <p className={styles.description}>{displayProject.description}</p>
 
             <div className={styles.facts}>
               <h3>Project Details</h3>
@@ -98,26 +157,26 @@ export default function ProjectDetail() {
                   <MapPin size={14} style={{ display: 'inline', marginRight: '4px' }} />
                   Location
                 </span>
-                <span className={styles.factValue}>{project.location}</span>
+                <span className={styles.factValue}>{displayProject.location}</span>
               </div>
               <div className={styles.fact}>
                 <span className={styles.factLabel}>
                   <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} />
                   Year
                 </span>
-                <span className={styles.factValue}>{project.year}</span>
+                <span className={styles.factValue}>{displayProject.year}</span>
               </div>
               <div className={styles.fact}>
                 <span className={styles.factLabel}>
                   <Ruler size={14} style={{ display: 'inline', marginRight: '4px' }} />
                   Area
                 </span>
-                <span className={styles.factValue}>{project.area}</span>
+                <span className={styles.factValue}>{displayProject.area}</span>
               </div>
               <div className={styles.fact}>
                 <span className={styles.factLabel}>Materials</span>
                 <div className={styles.materials}>
-                  {project.materials.map((material, index) => (
+                  {projectMaterials.map((material, index) => (
                     <span key={index} className={styles.materialTag}>{material}</span>
                   ))}
                 </div>
@@ -136,7 +195,7 @@ export default function ProjectDetail() {
         </motion.div>
 
         {/* Before/After Comparison */}
-        {project.beforeImage && project.afterImage && (
+        {displayProject.beforeImage && displayProject.afterImage && (
           <motion.div
             className={styles.beforeAfter}
             initial={{ opacity: 0 }}
@@ -150,12 +209,12 @@ export default function ProjectDetail() {
               onMouseMove={handleSliderMove}
             >
               <ImageWithFallback
-                src={project.beforeImage}
+                src={displayProject.beforeImage}
                 alt="Before"
                 className={styles.comparisonImage}
               />
               <ImageWithFallback
-                src={project.afterImage}
+                src={displayProject.afterImage}
                 alt="After"
                 className={`${styles.comparisonImage} ${styles.afterImage}`}
                 style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}

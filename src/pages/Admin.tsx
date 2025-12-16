@@ -29,6 +29,7 @@ export default function Admin() {
   });
 
   const [uploadForm, setUploadForm] = useState({
+    customerNumber: '',
     customerName: '',
     phone: '',
     category: '',
@@ -186,6 +187,7 @@ export default function Admin() {
       }, 200);
 
       const newImage = await api.uploadImage(selectedFile, {
+        customerNumber: uploadForm.customerNumber,
         customerName: uploadForm.customerName,
         phone: uploadForm.phone,
         category: uploadForm.category,
@@ -200,6 +202,7 @@ export default function Admin() {
 
       setTimeout(() => {
         setUploadForm({
+          customerNumber: '',
           customerName: '',
           phone: '',
           category: '',
@@ -366,14 +369,6 @@ export default function Admin() {
     );
   }
 
-  const resolveImageUrl = (image: any) =>
-  image.imageUrl ||
-  image.image_url ||
-  image.public_url ||
-  '';
-
-
-
   return (
     <div className={styles.admin}>
       <div className={styles.container}>
@@ -502,10 +497,7 @@ export default function Admin() {
                     transition={{ duration: 0.4, delay: index * 0.05 }}
                   >
                     <div className={styles.imagePreview}>
-                    <ImageWithFallback
-                      src={resolveImageUrl(image)}
-                      alt={image.customerName}
-                    />
+                      <ImageWithFallback src={image.imageUrl} alt={image.customerName} />
                       <span 
                         className={`${styles.statusBadge} ${styles[image.status]}`}
                         onClick={() => handleToggleStatus(image)}
@@ -737,6 +729,19 @@ export default function Admin() {
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
                     disabled={isUploading}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="customerNumber">Customer Number *</label>
+                  <input
+                    id="customerNumber"
+                    type="text"
+                    required
+                    value={uploadForm.customerNumber}
+                    onChange={(e) => setUploadForm({ ...uploadForm, customerNumber: e.target.value })}
+                    disabled={isUploading}
+                    placeholder="e.g., 001"
                   />
                 </div>
 

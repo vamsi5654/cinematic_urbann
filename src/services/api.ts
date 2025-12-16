@@ -9,14 +9,16 @@ export interface ImageUpload {
   id: string;
   imageUrl: string;
   publicId: string;
+  customerNumber: string;
   customerName: string;
   phone: string;
   category: string;
   tags: string[];
   description?: string;
   uploadedAt: Date;
-  uploadedBy?: string;
+  uploadedBy: string;
   status: 'draft' | 'published';
+  projectId?: string;
 }
 
 export interface LoginResponse {
@@ -100,6 +102,7 @@ export function logout(): void {
 export async function uploadImage(
   file: File,
   metadata: {
+    customerNumber: string;
     customerName: string;
     phone: string;
     category: string;
@@ -127,18 +130,9 @@ export async function uploadImage(
 
   const data = await response.json();
   return {
-  id: data.image.id,
-  imageUrl: data.image.imageUrl,
-  publicId: data.image.publicId,
-  customerName: data.image.customerName,
-  phone: data.image.phone,
-  category: data.image.category,
-  tags: data.image.tags || [],
-  description: data.image.description,
-  status: data.image.status,
-  uploadedAt: new Date(data.image.uploadedAt || Date.now()),
-};
-
+    ...data.image,
+    uploadedAt: new Date(data.image.uploadedAt || Date.now()),
+  };
 }
 
 // Get Images API
@@ -164,22 +158,12 @@ export async function getImages(filters?: {
     throw new Error('Failed to fetch images');
   }
 
-const data = await response.json();
-
-return data.images.map((img: any) => ({
-  id: img.id,
-  imageUrl: img.imageUrl,          // ✅ single source of truth
-  publicId: img.publicId,
-  customerName: img.customerName,
-  phone: img.phone,
-  category: img.category,
-  tags: img.tags || [],
-  description: img.description,
-  status: img.status,
-  uploadedAt: new Date(img.uploadedAt || Date.now()),
-}));
+  const data = await response.json();
+  return data.images.map((img: any) => ({
+    ...img,
+    uploadedAt: new Date(img.uploadedAt),
+  }));
 }
-
 
 // Delete Image API
 export async function deleteImage(imageId: string): Promise<void> {
@@ -301,4 +285,22 @@ export async function deleteEvent(id: string): Promise<void> {
   await apiFetch(`/events/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Get Project Details API (by projectId - which is based on customer_number + customer_name)
+export async function getProjectById(projectId: string): Promise<any> {
+  const response = await fetch(`${API_BASE_URL}/project/${projectId}`);
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch project details');
+  }
+
+  const data = await response.json();
+  return {
+    ...data.project,
+    images: data.images.map((img: any) => ({
+      ...img,
+      uploadedAt: new Date(img.uploadedAt),
+    })),
+  };
 }
