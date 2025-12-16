@@ -67,6 +67,17 @@ export async function onRequest(context: { request: Request; env: Env; params: {
       const projectId = path.split('/')[1];
       return await handleGetProjectDetails(projectId, env, headers);
     }
+    // Events routes
+    if (path === 'events' && request.method === 'POST') {
+      return await handleCreateEvent(request, env, headers);
+    }
+
+    if (path === 'events' && request.method === 'GET') {
+      return await handleGetEvents(env, headers);
+    }
+    //if (path === 'events/active' && request.method === 'GET') {
+     // return await handleGetActiveEvents(env, headers);
+    //}
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
@@ -252,6 +263,52 @@ const images = results.map((img: any) => ({
     headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }
+
+// Create Event
+async function handleCreateEvent(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>
+) {
+  const body = await request.json();
+
+  await env.DB.prepare(`
+    INSERT INTO events (
+      id, title, message, image_url,
+      scheduled_date, scheduled_time, active
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    crypto.randomUUID(),
+    body.title,
+    body.message,
+    body.imageUrl || null,
+    body.scheduledDate,
+    body.scheduledTime,
+    body.active ? 1 : 0
+  ).run();
+
+  return new Response(
+    JSON.stringify({ success: true }),
+    { headers: { ...headers, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Get Events
+async function handleGetEvents(
+  env: Env,
+  headers: Record<string, string>
+) {
+  const { results } = await env.DB
+    .prepare(`SELECT * FROM events ORDER BY scheduled_date DESC`)
+    .all();
+
+  return new Response(
+    JSON.stringify({ events: results }),
+    { headers: { ...headers, 'Content-Type': 'application/json' } }
+  );
+}
+
 
 // Delete image handler
 async function handleDeleteImage(imageId: string, request: Request, env: Env, headers: Record<string, string>) {
