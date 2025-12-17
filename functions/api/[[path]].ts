@@ -75,9 +75,10 @@ export async function onRequest(context: { request: Request; env: Env; params: {
     if (path === 'events' && request.method === 'GET') {
       return await handleGetEvents(env, headers);
     }
-    //if (path === 'events/active' && request.method === 'GET') {
-     // return await handleGetActiveEvents(env, headers);
-    //}
+    if (path.startsWith('events/') && request.method === 'DELETE') {
+  const eventId = path.split('/')[1];
+  return await handleDeleteEvent(eventId, request, env, headers);
+  }
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
@@ -319,6 +320,50 @@ async function handleCreateEvent(
     scheduledTime,
     active ? 1 : 0
   ).run();
+
+  return new Response(
+    JSON.stringify({ success: true }),
+    {
+      status: 200,
+      headers: { ...headers, 'Content-Type': 'application/json' }
+    }
+  );
+}
+
+// Delete Event
+async function handleDeleteEvent(
+  eventId: string,
+  request: Request,
+  env: Env,
+  headers: Record<string, string>
+) {
+  // 🔐 Auth check
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Check if event exists
+  const event = await env.DB
+    .prepare('SELECT id FROM events WHERE id = ?')
+    .bind(eventId)
+    .first();
+
+  if (!event) {
+    return new Response(JSON.stringify({ error: 'Event not found' }), {
+      status: 404,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Delete event
+  await env.DB
+    .prepare('DELETE FROM events WHERE id = ?')
+    .bind(eventId)
+    .run();
 
   return new Response(
     JSON.stringify({ success: true }),

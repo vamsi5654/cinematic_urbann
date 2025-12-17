@@ -57,12 +57,17 @@ export default function Home() {
     <div className={styles.home}>
       {/* Hero Section */}
       <section className={`${styles.hero} film-grain`} ref={heroRef}>
-        <motion.div className={styles.heroBackground} style={{ y }}>
-          <ImageWithFallback
-            src="https://images.unsplash.com/photo-1558442069-3213d209b19f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjBjaW5lbWF0aWN8ZW58MXx8fHwxNzY0NjkzNTM4fDA&ixlib=rb-4.1.0&q=80&w=1080"
-            alt="Luxury interior design"
-          />
-        </motion.div>
+        <div className={styles.heroBackground}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className={styles.heroVideo}
+          >
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-elegant-modern-living-room-interior-45440-large.mp4" type="video/mp4" />
+          </video>
+        </div>
         <div className={styles.heroOverlay}></div>
         <div className={styles.heroVignette}></div>
         
