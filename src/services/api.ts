@@ -99,41 +99,31 @@ export function logout(): void {
 }
 
 // Image Upload API
-export async function uploadImage(
-  file: File,
-  metadata: {
-    customerNumber: string;
-    customerName: string;
-    phone: string;
-    category: string;
-    tags: string[];
-    description?: string;
-    status: 'draft' | 'published';
-  }
-): Promise<ImageUpload> {
+export async function uploadImage(file: File, metadata: any) {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
   const formData = new FormData();
   formData.append('file', file);
   formData.append('metadata', JSON.stringify(metadata));
 
-  const token = getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/upload`, {
+  const response = await fetch('/api/upload', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error('Failed to upload image');
+    const text = await response.text();
+    throw new Error(text);
   }
 
   const data = await response.json();
-  return {
-    ...data.image,
-    uploadedAt: new Date(data.image.uploadedAt || Date.now()),
-  };
+  return data.image;
 }
+
 
 // Get Images API
 export async function getImages(filters?: {

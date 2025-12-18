@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Search, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus, Check, CheckCircle } from 'lucide-react';
+import { Upload, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus, CheckCircle } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { ImageUpload, ScheduledEvent, ContactSubmission } from '../types/index';
@@ -49,6 +49,8 @@ export default function Admin() {
 
   const [tagInput, setTagInput] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedBeforeFile, setSelectedBeforeFile] = useState<File | null>(null);
+  const [selectedAfterFile, setSelectedAfterFile] = useState<File | null>(null);
 
   // Load data on mount and tab change
   useEffect(() => {
@@ -822,6 +824,46 @@ export default function Admin() {
                     onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
                     disabled={isUploading}
                   />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="beforeImage">Before Image (optional)</label>
+                  <input
+                    id="beforeImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setSelectedBeforeFile(e.target.files[0]);
+                      }
+                    }}
+                    disabled={isUploading}
+                  />
+                  {selectedBeforeFile && (
+                    <p style={{ marginTop: '8px', fontSize: '14px', opacity: 0.7 }}>
+                      Selected: {selectedBeforeFile.name}
+                    </p>
+                  )}
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="afterImage">After Image (optional)</label>
+                  <input
+                    id="afterImage"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setSelectedAfterFile(e.target.files[0]);
+                      }
+                    }}
+                    disabled={isUploading}
+                  />
+                  {selectedAfterFile && (
+                    <p style={{ marginTop: '8px', fontSize: '14px', opacity: 0.7 }}>
+                      Selected: {selectedAfterFile.name}
+                    </p>
+                  )}
                 </div>
 
                 <div className={styles.formGroup}>

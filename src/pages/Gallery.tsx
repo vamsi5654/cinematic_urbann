@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Search, MapPin, Calendar } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -129,7 +129,7 @@ export default function Gallery() {
             title: `${img.customerName} - ${img.category}`,
             category: img.category,
             imageUrl: img.imageUrl,
-            images: img.imageUrl ? [img.imageUrl] : [],
+            images: [img.imageUrl],
             location: 'New York',
             year: new Date(img.uploadedAt).getFullYear().toString(),
             area: '400 sq ft',

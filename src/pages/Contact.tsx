@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -17,6 +17,29 @@ export default function Contact() {
     message: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaQuestion, setCaptchaQuestion] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [correctCaptcha, setCorrectCaptcha] = useState('');
+  const [captchaError, setCaptchaError] = useState(false);
+
+  // Generate random alphanumeric CAPTCHA on mount
+  useEffect(() => {
+    generateCaptcha();
+  }, []);
+
+  const generateCaptcha = () => {
+    // Generate 6-character alphanumeric string with capital letters, small letters, and numbers
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let captcha = '';
+    for (let i = 0; i < 6; i++) {
+      captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaQuestion(captcha);
+    setCorrectCaptcha(captcha);
+    setCaptchaAnswer('');
+    setCaptchaError(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -27,10 +50,22 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verify CAPTCHA (case-sensitive)
+    if (captchaAnswer !== correctCaptcha) {
+      setCaptchaError(true);
+      generateCaptcha();
+      return;
+    }
+
+    setIsSubmitting(true);
+    
     // Here you would normally send to backend/API
     api.submitContactForm(formData).then(() => {
       console.log('Form submitted:', formData);
       setIsSubmitted(true);
+      setIsSubmitting(false);
+      generateCaptcha();
       
       // Reset form after 3 seconds
       setTimeout(() => {
@@ -47,6 +82,8 @@ export default function Contact() {
       }, 3000);
     }).catch(error => {
       console.error('Error submitting form:', error);
+      setIsSubmitting(false);
+      generateCaptcha();
     });
   };
 
@@ -83,8 +120,8 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Visit Us</h3>
                 <p>
-                  6th Floor, The 27 Building, DLF Rd, Jayabheri Enclave,<br />
-              Gachibowli, Hyderabad, Telangana 500032
+                  123 Design Street, Suite 100<br />
+                  New York, NY 10001
                 </p>
               </div>
             </div>
@@ -96,7 +133,7 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Call Us</h3>
                 <p>
-                  <a href="tel:+1234567890">+91 8977978321</a>
+                  <a href="tel:+1234567890">+1 (234) 567-890</a>
                 </p>
               </div>
             </div>
@@ -108,7 +145,7 @@ export default function Contact() {
               <div className={styles.infoText}>
                 <h3>Email Us</h3>
                 <p>
-                  <a href="mailto:hello@theurbann.com">Urbann2009@gmail.com</a>
+                  <a href="mailto:hello@theurbann.com">hello@theurbann.com</a>
                 </p>
               </div>
             </div>
@@ -128,13 +165,15 @@ export default function Contact() {
             </div>
 
             <div className={styles.socialLinks}>
-              <a href="https://www.instagram.com/Urbann_interiors/#" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                 <Instagram size={20} />
               </a>
-              <a href="https://www.instagram.com/Urbann_interiors/#" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
                 <Facebook size={20} />
               </a>
-              
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className={styles.socialLink}>
+                <Linkedin size={20} />
+              </a>
             </div>
           </div>
 
@@ -209,10 +248,10 @@ export default function Contact() {
                     onChange={handleChange}
                   >
                     <option value="">Select budget range</option>
-                    <option value="under-50k">Under ₹50,000</option>
-                    <option value="50k-100k">₹50,000 - ₹100,000</option>
-                    <option value="100k-250k">₹100,000 - ₹250,000</option>
-                    <option value="250k-plus">₹250,000+</option>
+                    <option value="under-50k">Under $50,000</option>
+                    <option value="50k-100k">$50,000 - $100,000</option>
+                    <option value="100k-250k">$100,000 - $250,000</option>
+                    <option value="250k-plus">$250,000+</option>
                   </select>
                 </div>
                 <div className={styles.formGroup}>
@@ -244,9 +283,38 @@ export default function Contact() {
                 />
               </div>
 
+              <div className={styles.formGroup}>
+                <label htmlFor="captcha">Security Verification *</label>
+                <div className={styles.captchaContainer}>
+                  <div className={styles.captchaDisplay}>
+                    <span className={styles.captchaLabel}>Enter this code:</span>
+                    <span className={styles.captchaCode}>{captchaQuestion}</span>
+                    <button 
+                      type="button" 
+                      className={styles.captchaRefresh}
+                      onClick={generateCaptcha}
+                      aria-label="Generate new code"
+                    >
+                      ↻
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    id="captcha"
+                    name="captcha"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    placeholder="Type the code above"
+                    required
+                    className={captchaError ? styles.inputError : ''}
+                  />
+                </div>
+                {captchaError && <p className={styles.error}>Incorrect code. Please try again with the new code above.</p>}
+              </div>
+
               <div className={styles.submitButton}>
-                <Button type="submit" variant="primary" size="large">
-                  Send Message
+                <Button type="submit" variant="primary" size="large" disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Send Message'}
                 </Button>
               </div>
 

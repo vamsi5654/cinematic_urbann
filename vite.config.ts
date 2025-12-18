@@ -54,7 +54,14 @@
       outDir: 'build',
     },
     server: {
-      port: 3000,
-      open: true,
+    port: 3000,
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'https://cinematic-urbann.pages.dev',
+        changeOrigin: true,
+        secure: true,
+      },
     },
+  },
   });

@@ -3,7 +3,7 @@
 export interface Project {
   id: string;
   title: string;
-  category: 'Kitchen' | 'Living' | 'Bedroom' | 'Full Home' | 'Bathroom' | 'Office' | 'Bedroom Cupbordes';
+  category: 'Kitchen' | 'Living' | 'Bedroom' | 'Full Home' | 'Bathroom' | 'Office';
   imageUrl: string;
   images: string[];
   location: string;
@@ -21,13 +21,18 @@ export interface ImageUpload {
   id: string;
   imageUrl: string;
   publicId: string;
+  customerNumber: string;
   customerName: string;
   phone: string;
   category: string;
   tags: string[];
+  description?: string;
   uploadedAt: Date;
   uploadedBy: string;
   status: 'draft' | 'published';
+  projectId?: string;
+  beforeImageUrl?: string;
+  afterImageUrl?: string;
 }
 
 export interface Service {
