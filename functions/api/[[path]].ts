@@ -6,6 +6,7 @@ interface Env {
   DB: D1Database;
   JWT_SECRET: string;
   ALLOWED_ORIGINS?: string;
+  R2_PUBLIC_URL?: string; // Add this for custom R2 public URL
 }
 
 // CORS headers
@@ -62,23 +63,53 @@ export async function onRequest(context: { request: Request; env: Env; params: {
       return await handleUpdateImage(imageId, request, env, headers);
     }
 
-    // Project details route
-    if (path.startsWith('project/') && request.method === 'GET') {
-      const projectId = path.split('/')[1];
-      return await handleGetProjectDetails(projectId, env, headers);
+    // Contact form routes
+    if (path === 'contact' && request.method === 'POST') {
+      return await handleContactSubmission(request, env, headers);
     }
+
+    if (path === 'contact' && request.method === 'GET') {
+      return await handleGetContactSubmissions(request, env, headers);
+    }
+
+    if (path.startsWith('contact/') && path.endsWith('/read') && request.method === 'PUT') {
+      const contactId = path.split('/')[1];
+      return await handleMarkContactAsRead(contactId, request, env, headers);
+    }
+
     // Events routes
     if (path === 'events' && request.method === 'POST') {
       return await handleCreateEvent(request, env, headers);
     }
 
     if (path === 'events' && request.method === 'GET') {
-      return await handleGetEvents(env, headers);
+      return await handleGetEvents(request, env, headers);
     }
+
+    if (path === 'events/active' && request.method === 'GET') {
+      return await handleGetActiveEvents(request, env, headers);
+    }
+
+    if (path.startsWith('events/') && request.method === 'PUT') {
+      const eventId = path.split('/')[1];
+      return await handleUpdateEvent(eventId, request, env, headers);
+    }
+
     if (path.startsWith('events/') && request.method === 'DELETE') {
-  const eventId = path.split('/')[1];
-  return await handleDeleteEvent(eventId, request, env, headers);
-  }
+      const eventId = path.split('/')[1];
+      return await handleDeleteEvent(eventId, request, env, headers);
+    }
+
+    // Project details route
+    if (path.startsWith('project/') && request.method === 'GET') {
+      const projectId = path.split('/')[1];
+      return await handleGetProjectDetails(projectId, env, headers);
+    }
+
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
@@ -142,86 +173,196 @@ async function handleLogin(request: Request, env: Env, headers: Record<string, s
 
 // Upload handler
 async function handleUpload(request: Request, env: Env, headers: Record<string, string>) {
-  // Verify authentication
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const formData = await request.formData();
-  const file = formData.get('file') as File;
-  const metadataRaw = formData.get('metadata');
-if (!metadataRaw) {
-  return new Response(JSON.stringify({ error: 'Missing metadata' }), {
-    status: 400,
-    headers: { ...headers, 'Content-Type': 'application/json' },
-  });
-}
-const metadata = JSON.parse(metadataRaw as string);
-
-
-  if (!file) {
-    return new Response(JSON.stringify({ error: 'No file provided' }), {
-      status: 400,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Create hierarchical folder structure: /uploads/{customer_number}_{customer_name}/{category}/
-  const customerFolder = `${metadata.customerNumber}_${metadata.customerName.replace(/\s+/g, '_')}`;
-  const categoryFolder = metadata.category.replace(/\s+/g, '');
-  const fileExtension = file.name.split('.').pop();
-  const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
-  const fullPath = `uploads/${customerFolder}/${categoryFolder}/${fileName}`;
-  
-  // Upload to R2 with hierarchical path
-  await env.IMAGES_BUCKET.put(fullPath, file.stream(), {
-    httpMetadata: {
-      contentType: file.type,
-    },
-  });
-
-  // Generate public URL (you'll need to set up a custom domain for R2)
-  const imageUrl = `https://pub-7a6f0b58834843b5a59c1ea8c38fe6c1.r2.dev/${fullPath}`;
-
-  // Generate project_id based on customer number and name
-  const projectId = `${metadata.customerNumber}_${metadata.customerName.replace(/\s+/g, '_')}`;
-  
-  // Save metadata to D1
-  const imageId = crypto.randomUUID();
-  await env.DB.prepare(
-    `INSERT INTO images (id, public_id, image_url, customer_number, customer_name, phone, category, tags, description, status, project_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(
-    imageId,
-    fullPath,
-    imageUrl,
-    metadata.customerNumber,
-    metadata.customerName,
-    metadata.phone,
-    metadata.category,
-    JSON.stringify(metadata.tags || []),
-    metadata.description || '',
-    metadata.status || 'draft',
-    projectId
-  ).run();
-
-  return new Response(JSON.stringify({ 
-    success: true,
-    image: {
-      id: imageId,
-      imageUrl,
-      publicId: fullPath,
-      projectId,
-      ...metadata
+  try {
+    console.log('=== UPLOAD REQUEST STARTED ===');
+    
+    // Verify authentication
+    const authHeader = request.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Auth failed: Missing or invalid authorization header');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
     }
-  }), {
-    status: 200,
-    headers: { ...headers, 'Content-Type': 'application/json' },
-  });
+
+    console.log('Parsing form data...');
+    const formData = await request.formData();
+    console.log('Form data parsed successfully');
+    
+    const file = formData.get('file') as File;
+    const metadataString = formData.get('metadata') as string;
+    
+    console.log('File present:', !!file);
+    console.log('File name:', file?.name);
+    console.log('File size:', file?.size);
+    console.log('File type:', file?.type);
+    console.log('Metadata string present:', !!metadataString);
+    console.log('Metadata string:', metadataString);
+
+    if (!file) {
+      console.error('Upload failed: No file provided');
+      return new Response(JSON.stringify({ error: 'No file provided' }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!metadataString) {
+      console.error('Upload failed: No metadata provided');
+      return new Response(JSON.stringify({ error: 'No metadata provided' }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parse metadata with error handling
+    let metadata;
+    try {
+      metadata = JSON.parse(metadataString);
+      console.log('Metadata parsed successfully:', metadata);
+    } catch (parseError) {
+      console.error('Metadata parse error:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid metadata format',
+        details: parseError instanceof Error ? parseError.message : 'Unknown parsing error'
+      }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate required fields
+    console.log('Validating metadata fields...');
+    console.log('customerNumber:', metadata.customerNumber);
+    console.log('customerName:', metadata.customerName);
+    console.log('category:', metadata.category);
+    
+    if (!metadata.customerNumber || !metadata.customerName || !metadata.category) {
+      console.error('Validation failed: Missing required fields');
+      return new Response(JSON.stringify({ 
+        error: 'Missing required fields: customerNumber, customerName, or category',
+        received: {
+          customerNumber: metadata.customerNumber || 'missing',
+          customerName: metadata.customerName || 'missing',
+          category: metadata.category || 'missing'
+        }
+      }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Create hierarchical folder structure: /uploads/{customer_number}_{customer_name}/{category}/
+    const customerFolder = `${metadata.customerNumber}_${metadata.customerName.replace(/\s+/g, '_')}`;
+    const categoryFolder = metadata.category.replace(/\s+/g, '');
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
+    const fullPath = `uploads/${customerFolder}/${categoryFolder}/${fileName}`;
+    
+    console.log('File path:', fullPath);
+    console.log('Converting file to buffer...');
+    
+    // Convert file to ArrayBuffer for R2
+    const fileBuffer = await file.arrayBuffer();
+    console.log('File buffer size:', fileBuffer.byteLength);
+    
+    // Check if R2 bucket is available
+    if (!env.IMAGES_BUCKET) {
+      console.error('IMAGES_BUCKET binding not found!');
+      return new Response(JSON.stringify({ 
+        error: 'R2 bucket not configured',
+        details: 'IMAGES_BUCKET environment binding is missing'
+      }), {
+        status: 500,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log('Uploading to R2...');
+    // Upload to R2 with hierarchical path
+    await env.IMAGES_BUCKET.put(fullPath, fileBuffer, {
+      httpMetadata: {
+        contentType: file.type,
+      },
+    });
+    console.log('R2 upload successful');
+
+    // Generate public URL using R2 dev subdomain or custom domain
+    const bucketUrl = env.R2_PUBLIC_URL || 'https://pub-PLACEHOLDER.r2.dev';
+    const imageUrl = `${bucketUrl}/${fullPath}`;
+    console.log('Image URL:', imageUrl);
+    
+    // Generate project_id based on customer number and name
+    const projectId = `${metadata.customerNumber}_${metadata.customerName.replace(/\s+/g, '_')}`;
+    console.log('Project ID:', projectId);
+    
+    // Check if D1 database is available
+    if (!env.DB) {
+      console.error('DB binding not found!');
+      return new Response(JSON.stringify({ 
+        error: 'Database not configured',
+        details: 'DB environment binding is missing'
+      }), {
+        status: 500,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log('Saving to database...');
+    // Save metadata to D1
+    const imageId = crypto.randomUUID();
+    await env.DB.prepare(
+      `INSERT INTO images (id, public_id, image_url, customer_number, customer_name, phone, category, tags, description, status, project_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      imageId,
+      fullPath,
+      imageUrl,
+      metadata.customerNumber,
+      metadata.customerName,
+      metadata.phone || '',
+      metadata.category,
+      JSON.stringify(metadata.tags || []),
+      metadata.description || '',
+      metadata.status || 'draft',
+      projectId
+    ).run();
+    
+    console.log('Database insert successful');
+    console.log('=== UPLOAD COMPLETED SUCCESSFULLY ===');
+
+    return new Response(JSON.stringify({ 
+      success: true,
+      image: {
+        id: imageId,
+        imageUrl,
+        publicId: fullPath,
+        projectId,
+        ...metadata
+      }
+    }), {
+      status: 200,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('=== UPLOAD ERROR ===');
+    console.error('Error type:', error?.constructor?.name);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Full error:', error);
+    
+    return new Response(JSON.stringify({ 
+      error: 'Upload failed',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error?.constructor?.name || 'Unknown'
+    }), {
+      status: 500,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
 }
 
 // Get images handler
@@ -243,153 +384,17 @@ async function handleGetImages(request: Request, env: Env, headers: Record<strin
   const { results } = await env.DB.prepare(query).bind(...params).all();
   
   // Parse JSON fields
-const images = results.map((img: any) => ({
-  id: img.id,
-  imageUrl: img.image_url,        // ✅ IMPORTANT
-  publicId: img.public_id,
-  customerNumber: img.customer_number,
-  customerName: img.customer_name,
-  phone: img.phone,
-  category: img.category,
-  tags: JSON.parse(img.tags || '[]'),
-  description: img.description,
-  status: img.status,
-  projectId: img.project_id,
-  uploadedAt: img.uploaded_at     // ✅ IMPORTANT
-}));
-
+  const images = results.map(img => ({
+    ...img,
+    tags: JSON.parse(img.tags as string || '[]'),
+    uploadedAt: img.uploaded_at
+  }));
 
   return new Response(JSON.stringify({ images }), {
     status: 200,
     headers: { ...headers, 'Content-Type': 'application/json' },
   });
 }
-
-// Create Event
-// Create Event
-async function handleCreateEvent(
-  request: Request,
-  env: Env,
-  headers: Record<string, string>
-) {
-  // 🔐 Auth check (REQUIRED)
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  const body = await request.json();
-
-  const {
-    title,
-    message,
-    imageUrl,
-    scheduledDate,
-    scheduledTime,
-    active
-  } = body;
-
-  // ✅ Validation
-  if (!title || !message || !scheduledDate || !scheduledTime) {
-    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-      status: 400,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  await env.DB.prepare(`
-    INSERT INTO events (
-      id,
-      title,
-      message,
-      image_url,
-      scheduled_date,
-      scheduled_time,
-      active
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    crypto.randomUUID(),
-    title,
-    message,
-    imageUrl || null,
-    scheduledDate,
-    scheduledTime,
-    active ? 1 : 0
-  ).run();
-
-  return new Response(
-    JSON.stringify({ success: true }),
-    {
-      status: 200,
-      headers: { ...headers, 'Content-Type': 'application/json' }
-    }
-  );
-}
-
-// Delete Event
-async function handleDeleteEvent(
-  eventId: string,
-  request: Request,
-  env: Env,
-  headers: Record<string, string>
-) {
-  // 🔐 Auth check
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Check if event exists
-  const event = await env.DB
-    .prepare('SELECT id FROM events WHERE id = ?')
-    .bind(eventId)
-    .first();
-
-  if (!event) {
-    return new Response(JSON.stringify({ error: 'Event not found' }), {
-      status: 404,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Delete event
-  await env.DB
-    .prepare('DELETE FROM events WHERE id = ?')
-    .bind(eventId)
-    .run();
-
-  return new Response(
-    JSON.stringify({ success: true }),
-    {
-      status: 200,
-      headers: { ...headers, 'Content-Type': 'application/json' }
-    }
-  );
-}
-
-
-// Get Events
-async function handleGetEvents(
-  env: Env,
-  headers: Record<string, string>
-) {
-  const { results } = await env.DB
-    .prepare(`SELECT * FROM events ORDER BY scheduled_date DESC`)
-    .all();
-
-  return new Response(
-    JSON.stringify({ events: results }),
-    { headers: { ...headers, 'Content-Type': 'application/json' } }
-  );
-}
-
 
 // Delete image handler
 async function handleDeleteImage(imageId: string, request: Request, env: Env, headers: Record<string, string>) {
@@ -452,6 +457,218 @@ async function handleUpdateImage(imageId: string, request: Request, env: Env, he
     updates.status,
     imageId
   ).run();
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Contact form submission handler
+async function handleContactSubmission(request: Request, env: Env, headers: Record<string, string>) {
+  const contactData = await request.json();
+  
+  const contactId = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO contact_submissions (id, name, email, phone, project_type, budget, timeline, message, read_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`
+  ).bind(
+    contactId,
+    contactData.name,
+    contactData.email,
+    contactData.phone,
+    contactData.projectType || 'other',
+    contactData.budget || '',
+    contactData.timeline || '',
+    contactData.message
+  ).run();
+
+  return new Response(JSON.stringify({ 
+    success: true,
+    contactId
+  }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Get contact submissions handler
+async function handleGetContactSubmissions(request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM contact_submissions ORDER BY submitted_at DESC'
+  ).all();
+  
+  return new Response(JSON.stringify({ submissions: results }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Mark contact as read handler
+async function handleMarkContactAsRead(contactId: string, request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  await env.DB.prepare(
+    'UPDATE contact_submissions SET read_status = 1 WHERE id = ?'
+  ).bind(contactId).run();
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Create event handler
+async function handleCreateEvent(request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const eventData = await request.json();
+  
+  const eventId = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO scheduled_events (id, title, message, image_url, scheduled_date, scheduled_time, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    eventId,
+    eventData.title,
+    eventData.message,
+    eventData.imageUrl || '',
+    eventData.scheduledDate,
+    eventData.scheduledTime,
+    eventData.active ? 1 : 0
+  ).run();
+
+  return new Response(JSON.stringify({ 
+    success: true,
+    event: {
+      id: eventId,
+      ...eventData
+    }
+  }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Get events handler with auto-cleanup
+async function handleGetEvents(request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Auto-delete past events (events where scheduled_date < today)
+  const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  await env.DB.prepare(
+    'DELETE FROM scheduled_events WHERE scheduled_date < ?'
+  ).bind(today).run();
+  
+  // Get remaining events
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM scheduled_events ORDER BY scheduled_date DESC, scheduled_time DESC'
+  ).all();
+  
+  return new Response(JSON.stringify({ events: results }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Get active events handler with auto-cleanup
+async function handleGetActiveEvents(request: Request, env: Env, headers: Record<string, string>) {
+  // Auto-delete past events
+  const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  await env.DB.prepare(
+    'DELETE FROM scheduled_events WHERE scheduled_date < ?'
+  ).bind(today).run();
+
+  // Get active events for today or future
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM scheduled_events WHERE active = 1 AND scheduled_date >= ? ORDER BY scheduled_date, scheduled_time'
+  ).bind(today).all();
+  
+  return new Response(JSON.stringify({ events: results }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Update event handler
+async function handleUpdateEvent(eventId: string, request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const updates = await request.json();
+  
+  // Build dynamic update query based on provided fields
+  const fields = [];
+  const values = [];
+  
+  if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
+  if (updates.message !== undefined) { fields.push('message = ?'); values.push(updates.message); }
+  if (updates.imageUrl !== undefined) { fields.push('image_url = ?'); values.push(updates.imageUrl); }
+  if (updates.scheduledDate !== undefined) { fields.push('scheduled_date = ?'); values.push(updates.scheduledDate); }
+  if (updates.scheduledTime !== undefined) { fields.push('scheduled_time = ?'); values.push(updates.scheduledTime); }
+  if (updates.active !== undefined) { fields.push('active = ?'); values.push(updates.active ? 1 : 0); }
+  
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(eventId);
+  
+  await env.DB.prepare(
+    `UPDATE scheduled_events SET ${fields.join(', ')} WHERE id = ?`
+  ).bind(...values).run();
+
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
+
+// Delete event handler
+async function handleDeleteEvent(eventId: string, request: Request, env: Env, headers: Record<string, string>) {
+  // Verify authentication
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  await env.DB.prepare('DELETE FROM scheduled_events WHERE id = ?').bind(eventId).run();
 
   return new Response(JSON.stringify({ success: true }), {
     status: 200,

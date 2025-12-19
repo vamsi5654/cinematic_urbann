@@ -180,6 +180,19 @@ export default function Admin() {
       return;
     }
 
+    // Log what we're about to send (for debugging)
+    console.log('=== UPLOAD ATTEMPT ===');
+    console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type);
+    console.log('Metadata:', {
+      customerNumber: uploadForm.customerNumber,
+      customerName: uploadForm.customerName,
+      phone: uploadForm.phone,
+      category: uploadForm.category,
+      tags: uploadForm.tags,
+      description: uploadForm.description,
+      status: uploadForm.status
+    });
+
     try {
       setIsUploading(true);
       setUploadProgress(0);

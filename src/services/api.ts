@@ -99,31 +99,56 @@ export function logout(): void {
 }
 
 // Image Upload API
-export async function uploadImage(file: File, metadata: any) {
-  const token = getAuthToken();
-  if (!token) throw new Error('Not authenticated');
-
+export async function uploadImage(
+  file: File,
+  metadata: {
+    customerNumber: string;
+    customerName: string;
+    phone: string;
+    category: string;
+    tags: string[];
+    description?: string;
+    status: 'draft' | 'published';
+  }
+): Promise<ImageUpload> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('metadata', JSON.stringify(metadata));
 
-  const response = await fetch('/api/upload', {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}/upload`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: formData,
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text);
+    // Try to get detailed error message
+    let errorMessage = 'Failed to upload image';
+    try {
+      const errorData = await response.json();
+      console.error('Upload error response:', errorData);
+      errorMessage = errorData.error || errorMessage;
+      if (errorData.details) {
+        errorMessage += `: ${errorData.details}`;
+      }
+      if (errorData.errorType) {
+        errorMessage += ` (${errorData.errorType})`;
+      }
+    } catch (e) {
+      console.error('Could not parse error response:', e);
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
-  return data.image;
+  return {
+    ...data.image,
+    uploadedAt: new Date(data.image.uploadedAt || Date.now()),
+  };
 }
-
 
 // Get Images API
 export async function getImages(filters?: {
