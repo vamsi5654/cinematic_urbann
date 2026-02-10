@@ -119,31 +119,38 @@ export default function Gallery() {
       
       // Convert images to projects format and group by projectId
       const projectsMap = new Map<string, Project>();
-      
+            
       images.forEach(img => {
         const projectId = img.projectId || img.id;
-        
+
+        // ✅ VERY IMPORTANT (fallback safety)
+        const imageSrc = img.imageUrl || img.image_url;
+
+        if (!imageSrc) return; // skip broken records
+
         if (!projectsMap.has(projectId)) {
           projectsMap.set(projectId, {
             id: projectId,
-            title: `${img.customerName} - ${img.category}`,
+            title: `${img.customerName ?? 'Project'} - ${img.category}`,
             category: img.category,
-            imageUrl: img.imageUrl,
-            images: [img.imageUrl],
+            imageUrl: imageSrc,           // ✅ FIX
+            images: [imageSrc],           // ✅ FIX
             location: 'New York',
             year: new Date(img.uploadedAt).getFullYear().toString(),
             area: '400 sq ft',
-            materials: img.tags,
-            description: img.description || `Beautiful ${img.category.toLowerCase()} design for ${img.customerName}`,
-            tags: img.tags,
+            materials: img.tags ?? [],
+            description:
+              img.description ||
+              `Beautiful ${img.category.toLowerCase()} design`,
+            tags: img.tags ?? [],
             featured: false
           });
         } else {
-          // Add image to existing project
           const existingProject = projectsMap.get(projectId)!;
-          existingProject.images.push(img.imageUrl);
+          existingProject.images.push(imageSrc); // ✅ FIX
         }
       });
+
       
       const convertedProjects = Array.from(projectsMap.values());
       setProjects(convertedProjects);
