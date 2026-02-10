@@ -70,7 +70,7 @@ export default function Admin() {
 
   useEffect(() => {
   if (!localStorage.getItem('auth_token')) {
-    navigate('/admin-login');
+    navigate('/admin');
   }
 }, []);
 
