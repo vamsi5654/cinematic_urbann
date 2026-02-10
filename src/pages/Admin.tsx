@@ -117,11 +117,17 @@ export default function Admin() {
   };
 
   // Image handlers
-  const filteredImages = images.filter(img => {
-    const matchesSearch = img.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         img.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+  const filteredImages = images.filter((img) => {
+    const customerName = img.customerName?.toLowerCase() || '';
+    const category = img.category?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+
+    return (
+      customerName.includes(query) ||
+      category.includes(query)
+    );
   });
+
 
   const stats = {
     total: images.length,
