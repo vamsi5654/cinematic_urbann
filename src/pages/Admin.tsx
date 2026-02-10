@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Edit, Trash2, X, Eye, Image as ImageIcon, LogOut, Calendar, Mail, Plus, CheckCircle } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -22,6 +23,8 @@ export default function Admin() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
+
 
   const [loginForm, setLoginForm] = useState({
     username: '',
@@ -51,6 +54,27 @@ export default function Admin() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedBeforeFile, setSelectedBeforeFile] = useState<File | null>(null);
   const [selectedAfterFile, setSelectedAfterFile] = useState<File | null>(null);
+
+  //Log out on page unload to prevent token persistence
+  useEffect(() => {
+  const handleUnload = () => {
+    localStorage.removeItem('auth_token');
+  };
+
+  window.addEventListener('beforeunload', handleUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleUnload);
+  };
+}, []);
+
+  useEffect(() => {
+  if (!localStorage.getItem('auth_token')) {
+    navigate('/admin-login');
+  }
+}, []);
+
+
 
   // Load data on mount and tab change
   useEffect(() => {
@@ -117,16 +141,17 @@ export default function Admin() {
   };
 
   // Image handlers
-  const filteredImages = images.filter((img) => {
-    const customerName = img.customerName?.toLowerCase() || '';
-    const category = img.category?.toLowerCase() || '';
-    const query = searchQuery.toLowerCase();
+  const filteredImages = images.filter(img => {
+    const customerName = img.customerName || '';
+    const category = img.category || '';
 
-    return (
-      customerName.includes(query) ||
-      category.includes(query)
-    );
+    const matchesSearch =
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesSearch;
   });
+
 
 
   const stats = {
